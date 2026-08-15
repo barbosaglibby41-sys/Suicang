@@ -49,7 +49,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: SuicangTheme.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
         children: [
           const _ChatHeader(),
@@ -83,12 +83,14 @@ class _ChatHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
+    final scheme = Theme.of(context).colorScheme;
+    final surface = scheme.surface;
     return Container(
+      color: scheme.surface,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 11),
       decoration: BoxDecoration(
         color: surface,
-        border: const Border(bottom: BorderSide(color: SuicangTheme.line)),
+        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
       ),
       child: Row(
         children: [
@@ -164,7 +166,9 @@ class _MessageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = message.role == MessageRole.user;
-    final surface = Theme.of(context).colorScheme.surface;
+    final scheme = Theme.of(context).colorScheme;
+    final surface = scheme.surface;
+    final bubbleText = scheme.onSurface;
     return Padding(
       padding: const EdgeInsets.only(bottom: 22),
       child: Row(
@@ -188,12 +192,12 @@ class _MessageTile extends StatelessWidget {
                       bottomLeft: Radius.circular(user ? 19 : 5),
                       bottomRight: Radius.circular(user ? 5 : 19),
                     ),
-                    border: user ? null : Border.all(color: SuicangTheme.line),
+                    border: user ? null : Border.all(color: scheme.outlineVariant),
                     boxShadow: [BoxShadow(color: Colors.black.withOpacity(.025), blurRadius: 12, offset: const Offset(0, 4))],
                   ),
                   child: SelectableText(
                     message.content,
-                    style: TextStyle(color: user ? Colors.white : SuicangTheme.ink, height: 1.52, fontSize: 14),
+                    style: TextStyle(color: user ? Colors.white : bubbleText, height: 1.52, fontSize: 14),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -296,10 +300,12 @@ class _Composer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
+    final scheme = Theme.of(context).colorScheme;
+    final surface = scheme.surface;
+    final fieldFill = scheme.surfaceContainerHighest;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-      decoration: BoxDecoration(color: surface, border: const Border(top: BorderSide(color: SuicangTheme.line))),
+      decoration: BoxDecoration(color: surface, border: Border(top: BorderSide(color: scheme.outlineVariant))),
       child: SafeArea(
         top: false,
         child: Column(
@@ -331,7 +337,7 @@ class _Composer extends StatelessWidget {
                       hintText: generating ? 'Luna 正在思考…' : '写下你的回复…',
                       hintStyle: const TextStyle(fontSize: 13, color: SuicangTheme.muted),
                       filled: true,
-                      fillColor: SuicangTheme.background,
+                      fillColor: fieldFill,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                     ),
