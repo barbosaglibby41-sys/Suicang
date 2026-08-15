@@ -41,37 +41,39 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final chat = ref.watch(chatControllerProvider);
-    return Column(
-      children: [
-        const _ChatHeader(),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final maxWidth = constraints.maxWidth > 900 ? 760.0 : double.infinity;
-              return Align(
-                alignment: Alignment.topCenter,
-                child: SizedBox(
-                  width: maxWidth,
-                  child: ListView.builder(
-                    controller: _scroll,
-                    padding: const EdgeInsets.fromLTRB(18, 22, 18, 28),
-                    itemCount: chat.messages.length + (chat.isGenerating ? 1 : 0) + 2,
-                    itemBuilder: (_, index) {
-                      if (index == 0) return const _DateDivider();
-                      if (index == chat.messages.length + 1) {
-                        return chat.isGenerating ? const _TypingTile() : const _ConversationEnd();
-                      }
-                      if (index == chat.messages.length + 2) return const SizedBox(height: 8);
-                      return _MessageTile(message: chat.messages[index - 1]);
-                    },
+    final messageItems = <Widget>[
+      const _DateDivider(),
+      for (final message in chat.messages) _MessageTile(message: message),
+      if (chat.isGenerating) const _TypingTile() else const _ConversationEnd(),
+      const SizedBox(height: 8),
+    ];
+
+    return ColoredBox(
+      color: SuicangTheme.background,
+      child: Column(
+        children: [
+          const _ChatHeader(),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final maxWidth = constraints.maxWidth > 900 ? 760.0 : double.infinity;
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: SizedBox(
+                    width: maxWidth,
+                    child: ListView(
+                      controller: _scroll,
+                      padding: const EdgeInsets.fromLTRB(18, 22, 18, 28),
+                      children: messageItems,
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-        _Composer(controller: _input, generating: chat.isGenerating, onSend: _send),
-      ],
+          _Composer(controller: _input, generating: chat.isGenerating, onSend: _send),
+        ],
+      ),
     );
   }
 }
