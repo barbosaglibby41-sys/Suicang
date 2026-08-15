@@ -45,7 +45,7 @@ class OpenAiCompatibleProvider implements LlmProvider {
             final json = jsonDecode(payload) as Map<String, dynamic>;
             final choices = json['choices'];
             final first = choices is List && choices.isNotEmpty ? choices.first : null;
-            final delta = first is Map ? (first['delta'] as Map?)?['content'] : null;
+            final delta = first is Map ? ((first['delta'] as Map?)?['content']) : null;
             if (delta is String && delta.isNotEmpty) yield TextDelta(delta);
           } catch (_) {
             // Ignore incomplete SSE frames; the next chunk completes them.
