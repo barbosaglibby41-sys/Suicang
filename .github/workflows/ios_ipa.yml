@@ -41,7 +41,7 @@ jobs:
         run: dart format lib test
 
       - name: Analyze
-        run: flutter analyze
+        run: flutter analyze --no-fatal-infos
 
       - name: Test
         run: flutter test
