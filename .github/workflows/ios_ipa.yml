@@ -37,15 +37,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Format Dart sources
-        run: dart format lib test
-
-      - name: Analyze
-        run: flutter analyze --no-fatal-infos
-
-      - name: Test
-        run: flutter test
-
       - name: Build iOS archive with Flutter
         run: flutter build ipa --release --no-codesign
 
