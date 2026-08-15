@@ -32,6 +32,11 @@ class AppShell extends StatelessWidget {
     return Scaffold(
       body: SafeArea(child: child),
       bottomNavigationBar: NavigationBar(
+        height: 72,
+        elevation: 0,
+        backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(.96),
+        indicatorColor: const Color(0xFFEEEAFD),
+        labelTextStyle: const WidgetStatePropertyAll(TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
         selectedIndex: index < 0 ? 0 : index,
         onDestinationSelected: (i) => context.go(['/discover', '/chat', '/characters', '/settings'][i]),
         destinations: const [
