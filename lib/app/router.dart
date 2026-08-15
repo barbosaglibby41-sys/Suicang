@@ -1,0 +1,46 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../features/discover/presentation/discover_screen.dart';
+import '../features/chat/presentation/chat_screen.dart';
+import '../features/characters/presentation/characters_screen.dart';
+import '../features/settings/presentation/settings_screen.dart';
+
+final suicangRouter = GoRouter(
+  initialLocation: '/discover',
+  routes: [
+    ShellRoute(
+      builder: (context, state, child) => AppShell(child: child),
+      routes: [
+        GoRoute(path: '/discover', builder: (_, __) => const DiscoverScreen()),
+        GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
+        GoRoute(path: '/characters', builder: (_, __) => const CharactersScreen()),
+        GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+      ],
+    ),
+  ],
+);
+
+class AppShell extends StatelessWidget {
+  const AppShell({required this.child, super.key});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final location = GoRouterState.of(context).uri.path;
+    final index = ['/discover', '/chat', '/characters', '/settings']
+        .indexWhere(location.startsWith);
+    return Scaffold(
+      body: SafeArea(child: child),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: index < 0 ? 0 : index,
+        onDestinationSelected: (i) => context.go(['/discover', '/chat', '/characters', '/settings'][i]),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: '发现'),
+          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: '聊天'),
+          NavigationDestination(icon: Icon(Icons.auto_awesome_outlined), selectedIcon: Icon(Icons.auto_awesome), label: '角色'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), selectedIcon: Icon(Icons.settings), label: '设置'),
+        ],
+      ),
+    );
+  }
+}
