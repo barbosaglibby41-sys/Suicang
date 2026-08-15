@@ -2,20 +2,25 @@ name: iOS IPA
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release version
+        required: true
+        default: '1.01'
   push:
     tags:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FLUTTER_VERSION: stable
 
 jobs:
-  build-ios-unsigned:
+  build:
     name: Build unsigned iOS IPA
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +31,7 @@ jobs:
           channel: ${{ env.FLUTTER_VERSION }}
           cache: true
 
-      - name: Generate platform projects
+      - name: Generate iOS project
         run: flutter create --platforms=ios .
 
       - name: Install dependencies
@@ -41,25 +46,53 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Build iOS release without signing
-        run: flutter build ios --release --no-codesign
+      - name: Archive with Xcode
+        run: |
+          xcodebuild archive \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/Suicang.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_IDENTITY='' \
+            AD_HOC_CODE_SIGNING_ALLOWED=NO
 
-      - name: Package unsigned IPA
+      - name: Package unsigned IPA container
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf Payload Suicang-1.01-unsigned.ipa
-          mkdir -p Payload
-          cp -R build/ios/iphoneos/Runner.app Payload/Suicang.app
-          /usr/bin/zip -qry Suicang-1.01-unsigned.ipa Payload
-          shasum -a 256 Suicang-1.01-unsigned.ipa > Suicang-1.01-unsigned.ipa.sha256
+          VERSION="${{ inputs.version || '1.01' }}"
+          mkdir -p build/Payload
+          cp -R build/Suicang.xcarchive/Products/Applications/Runner.app build/Payload/Suicang.app
+          ditto -c -k --sequesterRsrc --keepParent build/Payload "build/Suicang-${VERSION}-unsigned.ipa"
+          shasum -a 256 "build/Suicang-${VERSION}-unsigned.ipa" > "build/Suicang-${VERSION}-unsigned.ipa.sha256"
+          unzip -t "build/Suicang-${VERSION}-unsigned.ipa"
 
-      - name: Upload unsigned IPA
+      - name: Upload unsigned archive and IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Suicang-1.01-unsigned-ipa
+          name: Suicang-${{ inputs.version || '1.01' }}-unsigned-build
           path: |
-            Suicang-1.01-unsigned.ipa
-            Suicang-1.01-unsigned.ipa.sha256
+            build/Suicang.xcarchive
+            build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa
+            build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa.sha256
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish unsigned IPA to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version || '1.01' }}
+          name: Suicang v${{ inputs.version || '1.01' }}
+          body: |
+            Suicang v${{ inputs.version || '1.01' }} iOS build.
+
+            This is an unsigned IPA container. It is not directly runnable on iOS.
+            Re-sign it with your Apple ID using SideStore, AltStore, Sideloadly, or Xcode.
+          files: |
+            build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa
+            build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa.sha256
+          overwrite_files: true
+          prerelease: true
