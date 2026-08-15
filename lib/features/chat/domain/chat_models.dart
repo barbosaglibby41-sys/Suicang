@@ -25,15 +25,16 @@ class ChatMessage {
     String? content,
     MessageStatus? status,
     int? tokenCount,
-  }) => ChatMessage(
-    id: id,
-    role: role,
-    content: content ?? this.content,
-    createdAt: createdAt,
-    status: status ?? this.status,
-    parentId: parentId,
-    tokenCount: tokenCount ?? this.tokenCount,
-  );
+  }) =>
+      ChatMessage(
+        id: id,
+        role: role,
+        content: content ?? this.content,
+        createdAt: createdAt,
+        status: status ?? this.status,
+        parentId: parentId,
+        tokenCount: tokenCount ?? this.tokenCount,
+      );
 }
 
 class ChatSession {

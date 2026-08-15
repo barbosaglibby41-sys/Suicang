@@ -34,7 +34,8 @@ class LocalJsonStore {
     return file;
   }
 
-  static Future<File> writeBytes(String name, List<int> bytes, {String extension = 'bin'}) async {
+  static Future<File> writeBytes(String name, List<int> bytes,
+      {String extension = 'bin'}) async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/$name.$extension');
     await file.writeAsBytes(bytes, flush: true);

@@ -21,7 +21,8 @@ class GenerationSettings {
     int? maxTokens,
     double? topP,
     double? repetitionPenalty,
-  }) => GenerationSettings(
+  }) =>
+      GenerationSettings(
         model: model ?? this.model,
         temperature: temperature ?? this.temperature,
         maxTokens: maxTokens ?? this.maxTokens,
@@ -60,7 +61,8 @@ class TextDelta extends GenerationEvent {
 }
 
 class GenerationUsage extends GenerationEvent {
-  const GenerationUsage({required this.inputTokens, required this.outputTokens});
+  const GenerationUsage(
+      {required this.inputTokens, required this.outputTokens});
   final int inputTokens;
   final int outputTokens;
 }

@@ -5,7 +5,17 @@ import '../../characters/domain/character_card.dart';
 import '../../../core/theme/suicang_theme.dart';
 
 class WorkspaceSheet extends StatefulWidget {
-  const WorkspaceSheet({required this.state, required this.characters, required this.onSessionSelected, required this.onCharacterSelected, required this.onPersonaChanged, required this.onGreetingSelected, required this.onNewSession, required this.onRenameSession, required this.onDeleteSession, super.key});
+  const WorkspaceSheet(
+      {required this.state,
+      required this.characters,
+      required this.onSessionSelected,
+      required this.onCharacterSelected,
+      required this.onPersonaChanged,
+      required this.onGreetingSelected,
+      required this.onNewSession,
+      required this.onRenameSession,
+      required this.onDeleteSession,
+      super.key});
   final ChatState state;
   final List<CharacterCard> characters;
   final ValueChanged<String> onSessionSelected;
@@ -32,23 +42,44 @@ class _WorkspaceSheetState extends State<WorkspaceSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('聊天工作区', style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
+            const Text('聊天工作区',
+                style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
-            const Text('角色、会话和 Persona 都属于当前聊天上下文。', style: TextStyle(fontSize: 12, color: SuicangTheme.muted)),
+            const Text('角色、会话和 Persona 都属于当前聊天上下文。',
+                style: TextStyle(fontSize: 12, color: SuicangTheme.muted)),
             const SizedBox(height: 18),
             _CharacterCard(character: _character, onTap: _selectCharacter),
             if (_character.card?.alternateGreetings.isNotEmpty == true) ...[
               const SizedBox(height: 12),
-              _GreetingPicker(greetings: _character.card!.alternateGreetings, onSelected: widget.onGreetingSelected),
+              _GreetingPicker(
+                  greetings: _character.card!.alternateGreetings,
+                  onSelected: widget.onGreetingSelected),
             ],
             const SizedBox(height: 20),
-            Row(children: [const Expanded(child: _SheetTitle(icon: Icons.forum_outlined, title: '会话')), IconButton(tooltip: '新建会话', onPressed: widget.onNewSession, icon: const Icon(Icons.add_circle_outline))]),
+            Row(children: [
+              const Expanded(
+                  child: _SheetTitle(icon: Icons.forum_outlined, title: '会话')),
+              IconButton(
+                  tooltip: '新建会话',
+                  onPressed: widget.onNewSession,
+                  icon: const Icon(Icons.add_circle_outline))
+            ]),
             const SizedBox(height: 8),
-            ...widget.state.sessions.map((session) => _SessionTile(session: session, selected: session.id == widget.state.sessionId, onTap: () => widget.onSessionSelected(session.id), onRename: () => _rename(session), onDelete: () => widget.onDeleteSession(session.id))),
+            ...widget.state.sessions.map((session) => _SessionTile(
+                session: session,
+                selected: session.id == widget.state.sessionId,
+                onTap: () => widget.onSessionSelected(session.id),
+                onRename: () => _rename(session),
+                onDelete: () => widget.onDeleteSession(session.id))),
             const SizedBox(height: 18),
             const _SheetTitle(icon: Icons.badge_outlined, title: '用户 Persona'),
             const SizedBox(height: 8),
-            _PersonaEditor(persona: _persona, onChanged: (next) { setState(() => _persona = next); widget.onPersonaChanged(next); }),
+            _PersonaEditor(
+                persona: _persona,
+                onChanged: (next) {
+                  setState(() => _persona = next);
+                  widget.onPersonaChanged(next);
+                }),
           ],
         ),
       ),
@@ -57,14 +88,59 @@ class _WorkspaceSheetState extends State<WorkspaceSheet> {
 
   Future<void> _rename(ChatSessionSummary session) async {
     final controller = TextEditingController(text: session.title);
-    final title = await showDialog<String>(context: context, builder: (_) => AlertDialog(title: const Text('重命名会话'), content: TextField(controller: controller, autofocus: true, decoration: const InputDecoration(hintText: '会话名称')), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('取消')), FilledButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('保存'))]));
+    final title = await showDialog<String>(
+        context: context,
+        builder: (_) => AlertDialog(
+                title: const Text('重命名会话'),
+                content: TextField(
+                    controller: controller,
+                    autofocus: true,
+                    decoration: const InputDecoration(hintText: '会话名称')),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('取消')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(context, controller.text),
+                      child: const Text('保存'))
+                ]));
     controller.dispose();
     if (title != null) widget.onRenameSession(session.id, title);
   }
 
   void _selectCharacter() {
-    final options = widget.characters.map((card) => CharacterProfile(id: card.id, name: card.name, subtitle: card.tagline, emoji: card.avatar, avatarData: card.avatarData, description: card.description, card: card)).toList();
-    showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: options.map((option) => ListTile(leading: Text(option.emoji, style: const TextStyle(fontSize: 26)), title: Text(option.name), subtitle: Text(option.subtitle), trailing: option.id == _character.id ? const Icon(Icons.check, color: SuicangTheme.primary) : null, onTap: () { setState(() => _character = option); widget.onCharacterSelected(option); Navigator.pop(context); })).toList())));
+    final options = widget.characters
+        .map((card) => CharacterProfile(
+            id: card.id,
+            name: card.name,
+            subtitle: card.tagline,
+            emoji: card.avatar,
+            avatarData: card.avatarData,
+            description: card.description,
+            card: card))
+        .toList();
+    showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (_) => SafeArea(
+            child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: options
+                    .map((option) => ListTile(
+                        leading: Text(option.emoji,
+                            style: const TextStyle(fontSize: 26)),
+                        title: Text(option.name),
+                        subtitle: Text(option.subtitle),
+                        trailing: option.id == _character.id
+                            ? const Icon(Icons.check,
+                                color: SuicangTheme.primary)
+                            : null,
+                        onTap: () {
+                          setState(() => _character = option);
+                          widget.onCharacterSelected(option);
+                          Navigator.pop(context);
+                        }))
+                    .toList())));
   }
 }
 
@@ -79,8 +155,39 @@ class _CharacterCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Ink(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: SuicangTheme.soft, borderRadius: BorderRadius.circular(18)),
-          child: Row(children: [Container(width: 48, height: 48, decoration: BoxDecoration(gradient: SuicangTheme.brandGradient, borderRadius: BorderRadius.circular(15)), child: Center(child: Text(character.emoji, style: const TextStyle(fontSize: 25)))), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(character.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)), const SizedBox(height: 3), Text(character.subtitle, style: const TextStyle(fontSize: 11, color: SuicangTheme.muted)), const SizedBox(height: 5), Text(character.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, height: 1.3))])), const Icon(Icons.chevron_right_rounded, color: SuicangTheme.muted)]),
+          decoration: BoxDecoration(
+              color: SuicangTheme.soft,
+              borderRadius: BorderRadius.circular(18)),
+          child: Row(children: [
+            Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                    gradient: SuicangTheme.brandGradient,
+                    borderRadius: BorderRadius.circular(15)),
+                child: Center(
+                    child: Text(character.emoji,
+                        style: const TextStyle(fontSize: 25)))),
+            const SizedBox(width: 12),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(character.name,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, fontSize: 15)),
+                  const SizedBox(height: 3),
+                  Text(character.subtitle,
+                      style: const TextStyle(
+                          fontSize: 11, color: SuicangTheme.muted)),
+                  const SizedBox(height: 5),
+                  Text(character.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 11, height: 1.3))
+                ])),
+            const Icon(Icons.chevron_right_rounded, color: SuicangTheme.muted)
+          ]),
         ),
       );
 }
@@ -91,11 +198,21 @@ class _SheetTitle extends StatelessWidget {
   final String title;
 
   @override
-  Widget build(BuildContext context) => Row(children: [Icon(icon, size: 17, color: SuicangTheme.primary), const SizedBox(width: 7), Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800))]);
+  Widget build(BuildContext context) => Row(children: [
+        Icon(icon, size: 17, color: SuicangTheme.primary),
+        const SizedBox(width: 7),
+        Text(title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800))
+      ]);
 }
 
 class _SessionTile extends StatelessWidget {
-  const _SessionTile({required this.session, required this.selected, required this.onTap, required this.onRename, required this.onDelete});
+  const _SessionTile(
+      {required this.session,
+      required this.selected,
+      required this.onTap,
+      required this.onRename,
+      required this.onDelete});
   final ChatSessionSummary session;
   final bool selected;
   final VoidCallback onTap;
@@ -108,10 +225,29 @@ class _SessionTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         tileColor: selected ? SuicangTheme.soft : null,
-        leading: Icon(selected ? Icons.chat_bubble : Icons.chat_bubble_outline, size: 18, color: selected ? SuicangTheme.primary : SuicangTheme.muted),
-        title: Text(session.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-        subtitle: Text(session.preview, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: SuicangTheme.muted)),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [if (selected) const Icon(Icons.check_circle, size: 17, color: SuicangTheme.primary), PopupMenuButton<String>(onSelected: (value) { if (value == 'rename') onRename(); if (value == 'delete') onDelete(); }, itemBuilder: (_) => const [PopupMenuItem(value: 'rename', child: Text('重命名')), PopupMenuItem(value: 'delete', child: Text('删除'))])]),
+        leading: Icon(selected ? Icons.chat_bubble : Icons.chat_bubble_outline,
+            size: 18,
+            color: selected ? SuicangTheme.primary : SuicangTheme.muted),
+        title: Text(session.title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+        subtitle: Text(session.preview,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 11, color: SuicangTheme.muted)),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (selected)
+            const Icon(Icons.check_circle,
+                size: 17, color: SuicangTheme.primary),
+          PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'rename') onRename();
+                if (value == 'delete') onDelete();
+              },
+              itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'rename', child: Text('重命名')),
+                    PopupMenuItem(value: 'delete', child: Text('删除'))
+                  ])
+        ]),
         onTap: onTap,
       );
 }
@@ -122,9 +258,22 @@ class _PersonaEditor extends StatelessWidget {
   final ValueChanged<UserPersona> onChanged;
 
   @override
-  Widget build(BuildContext context) => Column(children: [TextFormField(initialValue: persona.name, decoration: const InputDecoration(labelText: '显示名称', prefixIcon: Icon(Icons.person_outline)), onChanged: (value) => onChanged(persona.copyWith(name: value))), const SizedBox(height: 10), TextFormField(initialValue: persona.description, maxLines: 2, decoration: const InputDecoration(labelText: '身份描述', prefixIcon: Icon(Icons.notes_outlined)), onChanged: (value) => onChanged(persona.copyWith(description: value)))]);
+  Widget build(BuildContext context) => Column(children: [
+        TextFormField(
+            initialValue: persona.name,
+            decoration: const InputDecoration(
+                labelText: '显示名称', prefixIcon: Icon(Icons.person_outline)),
+            onChanged: (value) => onChanged(persona.copyWith(name: value))),
+        const SizedBox(height: 10),
+        TextFormField(
+            initialValue: persona.description,
+            maxLines: 2,
+            decoration: const InputDecoration(
+                labelText: '身份描述', prefixIcon: Icon(Icons.notes_outlined)),
+            onChanged: (value) =>
+                onChanged(persona.copyWith(description: value)))
+      ]);
 }
-
 
 class _GreetingPicker extends StatelessWidget {
   const _GreetingPicker({required this.greetings, required this.onSelected});
@@ -132,14 +281,24 @@ class _GreetingPicker extends StatelessWidget {
   final ValueChanged<String> onSelected;
 
   @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('替代开场白', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('替代开场白',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
         const SizedBox(height: 7),
         ...greetings.asMap().entries.map((item) => ListTile(
               dense: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 10),
-              leading: CircleAvatar(radius: 13, backgroundColor: SuicangTheme.soft, child: Text('${item.key + 1}', style: const TextStyle(fontSize: 11, color: SuicangTheme.primary))),
-              title: Text(item.value, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, height: 1.35)),
+              leading: CircleAvatar(
+                  radius: 13,
+                  backgroundColor: SuicangTheme.soft,
+                  child: Text('${item.key + 1}',
+                      style: const TextStyle(
+                          fontSize: 11, color: SuicangTheme.primary))),
+              title: Text(item.value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 11, height: 1.35)),
               onTap: () => onSelected(item.value),
             )),
       ]);
