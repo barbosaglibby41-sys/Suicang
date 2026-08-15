@@ -48,9 +48,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       const SizedBox(height: 8),
     ];
 
-    return ColoredBox(
-      color: SuicangTheme.background,
-      child: Column(
+    return Scaffold(
+      backgroundColor: SuicangTheme.background,
+      body: Column(
         children: [
           const _ChatHeader(),
           Expanded(

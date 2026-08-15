@@ -30,7 +30,13 @@ class AppShell extends StatelessWidget {
     final index = ['/discover', '/chat', '/characters', '/settings']
         .indexWhere(location.startsWith);
     return Scaffold(
-      body: SafeArea(child: child),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: ColoredBox(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: child,
+        ),
+      ),
       bottomNavigationBar: NavigationBar(
         height: 72,
         elevation: 0,
