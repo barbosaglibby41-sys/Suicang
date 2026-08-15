@@ -1,0 +1,65 @@
+name: iOS IPA
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: stable
+
+jobs:
+  build-ios-unsigned:
+    name: Build unsigned iOS IPA
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Generate platform projects
+        run: flutter create --platforms=ios .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Format Dart sources
+        run: dart format lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build iOS release without signing
+        run: flutter build ios --release --no-codesign
+
+      - name: Package unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf Payload Suicang-1.01-unsigned.ipa
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/Suicang.app
+          /usr/bin/zip -qry Suicang-1.01-unsigned.ipa Payload
+          shasum -a 256 Suicang-1.01-unsigned.ipa > Suicang-1.01-unsigned.ipa.sha256
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Suicang-1.01-unsigned-ipa
+          path: |
+            Suicang-1.01-unsigned.ipa
+            Suicang-1.01-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 14
