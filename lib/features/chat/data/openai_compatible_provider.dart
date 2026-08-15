@@ -3,11 +3,24 @@ import 'package:dio/dio.dart';
 import '../domain/generation.dart';
 
 class OpenAiCompatibleProvider implements LlmProvider {
-  OpenAiCompatibleProvider({required this.baseUrl, required this.apiKey, Dio? dio}) : _dio = dio ?? Dio();
+  OpenAiCompatibleProvider({required this.baseUrl, required this.apiKey, Dio? dio}) : _dio = dio ?? Dio(BaseOptions(connectTimeout: const Duration(seconds: 15), sendTimeout: const Duration(seconds: 30), receiveTimeout: const Duration(minutes: 5)));
 
   final String baseUrl;
   final String apiKey;
   final Dio _dio;
+
+  Future<String> testConnection({String? model}) async {
+    try {
+      final response = await _dio.get<dynamic>(
+        '${baseUrl.replaceFirst(RegExp(r'/$'), '')}/models',
+        options: Options(headers: {'Authorization': 'Bearer $apiKey', 'Accept': 'application/json'}),
+      );
+      if (response.statusCode != null && response.statusCode! >= 200 && response.statusCode! < 300) return '连接成功${model == null || model.isEmpty ? '' : ' · $model'}';
+      throw Exception('HTTP ${response.statusCode}');
+    } on DioException catch (error) {
+      throw Exception(error.response?.statusMessage ?? error.message ?? '连接失败');
+    }
+  }
 
   @override
   Stream<GenerationEvent> generate(GenerationRequest request) async* {
@@ -18,7 +31,9 @@ class OpenAiCompatibleProvider implements LlmProvider {
           'model': request.model,
           'stream': true,
           'temperature': request.temperature,
+          'top_p': request.topP,
           'max_tokens': request.maxTokens,
+          'repetition_penalty': request.repetitionPenalty,
           'messages': [
             if (request.systemPrompt != null) {'role': 'system', 'content': request.systemPrompt},
             ...request.messages.map((message) => {'role': message.role.name, 'content': message.content}),
