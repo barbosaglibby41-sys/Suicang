@@ -33,8 +33,8 @@ class OpenAiCompatibleProvider implements LlmProvider {
       final stream = response.data?.stream;
       if (stream == null) { yield const GenerationFailed('模型没有返回数据'); return; }
       var buffer = '';
-      await for (final chunk in stream.transform(utf8.decoder)) {
-        buffer += chunk;
+      await for (final bytes in stream) {
+        buffer += utf8.decode(bytes, allowMalformed: true);
         final lines = buffer.split('\n');
         buffer = lines.removeLast();
         for (final line in lines) {
