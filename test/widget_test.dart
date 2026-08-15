@@ -8,6 +8,6 @@ void main() {
 
     expect(find.text('Suicang'), findsOneWidget);
     expect(find.text('快速开始'), findsOneWidget);
-    expect(find.text('继续对话'), findsOneWidget);
+    expect(find.textContaining('让灵感'), findsOneWidget);
   });
 }
