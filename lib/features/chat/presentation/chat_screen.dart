@@ -86,7 +86,6 @@ class _ChatHeader extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final surface = scheme.surface;
     return Container(
-      color: scheme.surface,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 11),
       decoration: BoxDecoration(
         color: surface,
