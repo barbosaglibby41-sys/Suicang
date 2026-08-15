@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../domain/chat_models.dart';
-import '../domain/generation.dart';
 
 final chatControllerProvider = NotifierProvider<ChatController, ChatState>(ChatController.new);
 

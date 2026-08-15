@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import '../domain/chat_models.dart';
 import '../domain/generation.dart';
 
 class OpenAiCompatibleProvider implements LlmProvider {
