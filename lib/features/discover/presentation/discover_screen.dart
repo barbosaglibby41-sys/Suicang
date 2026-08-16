@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/theme/suicang_theme.dart';
 
 class DiscoverScreen extends StatelessWidget {
@@ -6,72 +7,114 @@ class DiscoverScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        SliverToBoxAdapter(child: _Header(colors: colors)),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              const _Greeting(),
-              const SizedBox(height: 22),
-              _HeroCard(onTap: () {}),
-              const SizedBox(height: 28),
-              _SectionHeader(title: '快速开始', action: '全部'),
-              const SizedBox(height: 12),
-              const _QuickActions(),
-              const SizedBox(height: 28),
-              _SectionHeader(title: '继续对话', action: '查看历史'),
-              const SizedBox(height: 12),
-              const _ContinueCard(),
-              const SizedBox(height: 28),
-              _SectionHeader(title: '我的角色', action: '管理角色'),
-              const SizedBox(height: 12),
-              const _CharacterRail(),
-            ]),
-          ),
+          padding: const EdgeInsets.fromLTRB(22, 18, 22, 120),
+          sliver: SliverList(delegate: SliverChildListDelegate([
+            const _TopBar(),
+            const SizedBox(height: 38),
+            const _Welcome(),
+            const SizedBox(height: 26),
+            _StoryStage(onTap: () => context.go('/chat')),
+            const SizedBox(height: 34),
+            _SectionTitle(title: '最近相遇', action: '全部'),
+            const SizedBox(height: 14),
+            _RecentStory(onTap: () => context.go('/chat')),
+            const SizedBox(height: 34),
+            const _SectionTitle(title: '为你准备的角色', action: '探索'),
+            const SizedBox(height: 14),
+            const _CharacterRail(),
+          ])),
         ),
       ],
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({required this.colors});
-  final ColorScheme colors;
+class _TopBar extends StatelessWidget {
+  const _TopBar();
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-    child: Row(children: [
-      Container(width: 42, height: 42, decoration: BoxDecoration(gradient: SuicangTheme.brandGradient, borderRadius: BorderRadius.circular(15), boxShadow: [BoxShadow(color: SuicangTheme.primary.withOpacity(.25), blurRadius: 16, offset: const Offset(0, 7))]), child: const Icon(Icons.auto_awesome, color: Colors.white, size: 22)),
-      const SizedBox(width: 12),
-      const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Suicang', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, letterSpacing: -.5)), SizedBox(height: 2), Text('你的 AI 创作空间', style: TextStyle(fontSize: 11, color: SuicangTheme.muted))])),
-      _IconButton(icon: Icons.search, onTap: () {}), const SizedBox(width: 9), _IconButton(icon: Icons.menu_rounded, onTap: () {}),
+  Widget build(BuildContext context) => Row(children: [
+    Container(width: 36, height: 36, decoration: BoxDecoration(gradient: SuicangTheme.brandGradient, borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.auto_awesome, color: Colors.white, size: 19)),
+    const SizedBox(width: 10),
+    const Text('suicang', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+    const Spacer(),
+    IconButton(onPressed: () {}, icon: const Icon(Icons.search_rounded, size: 22)),
+    IconButton(onPressed: () {}, icon: const Icon(Icons.account_circle_outlined, size: 24)),
+  ]);
+}
+
+class _Welcome extends StatelessWidget {
+  const _Welcome();
+  @override
+  Widget build(BuildContext context) => const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Text('星期六，8 月 16 日', style: TextStyle(color: SuicangTheme.muted, fontSize: 13, fontWeight: FontWeight.w600)),
+    SizedBox(height: 9),
+    Text('今天，\n想让谁走进你的故事？', style: TextStyle(fontSize: 31, height: 1.08, fontWeight: FontWeight.w800)),
+  ]);
+}
+
+class _StoryStage extends StatelessWidget {
+  const _StoryStage({required this.onTap});
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => AspectRatio(aspectRatio: 1.12, child: GestureDetector(onTap: onTap, child: Container(
+    padding: const EdgeInsets.all(22),
+    decoration: BoxDecoration(gradient: SuicangTheme.heroGradient, borderRadius: BorderRadius.circular(24), boxShadow: [BoxShadow(color: const Color(0xFF332B62).withOpacity(.24), blurRadius: 30, offset: const Offset(0, 14))]),
+    child: Stack(children: [
+      Positioned(right: -18, top: -18, child: Container(width: 190, height: 190, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFFB3A1FF).withOpacity(.12)))),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('CONTINUE A STORY', style: TextStyle(color: Colors.white.withOpacity(.56), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.7)),
+        const Spacer(),
+        const Text('月光下的\n旅人', style: TextStyle(color: Colors.white, fontSize: 29, height: 1.03, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 9),
+        Text('Luna 还在旧城的窗边等你。', style: TextStyle(color: Colors.white.withOpacity(.68), fontSize: 12)),
+        const SizedBox(height: 20),
+        Row(children: [
+          FilledButton.icon(onPressed: onTap, icon: const Icon(Icons.play_arrow_rounded, size: 18), label: const Text('继续对话'), style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: const Color(0xFF4F3CA8), padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11))),
+          const SizedBox(width: 10),
+          Text('64% 完成', style: TextStyle(color: Colors.white.withOpacity(.62), fontSize: 11)),
+        ]),
+      ]),
+      const Positioned(right: 22, top: 35, child: Text('🌙', style: TextStyle(fontSize: 64))),
     ]),
-  );
+  )));
 }
 
-class _Greeting extends StatelessWidget {
-  const _Greeting();
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.action});
+  final String title, action;
   @override
-  Widget build(BuildContext context) => const Padding(padding: EdgeInsets.only(top: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('星期六，8 月 15 日', style: TextStyle(fontSize: 14, color: SuicangTheme.muted)), SizedBox(height: 7), Text('今天想和谁\n开始一段故事？', style: TextStyle(fontSize: 30, height: 1.08, fontWeight: FontWeight.w800, letterSpacing: -1.2))]));
+  Widget build(BuildContext context) => Row(children: [Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)), const Spacer(), Text(action, style: const TextStyle(color: SuicangTheme.primary, fontSize: 12, fontWeight: FontWeight.w700))]);
 }
 
-class _HeroCard extends StatelessWidget {
-  const _HeroCard({required this.onTap}); final VoidCallback onTap;
+class _RecentStory extends StatelessWidget {
+  const _RecentStory({required this.onTap});
+  final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Container(height: 200, padding: const EdgeInsets.all(21), decoration: BoxDecoration(gradient: SuicangTheme.heroGradient, borderRadius: BorderRadius.circular(27), boxShadow: [BoxShadow(color: const Color(0xFF39335D).withOpacity(.18), blurRadius: 24, offset: const Offset(0, 10))]), child: Stack(children: [Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('CONTINUE CREATING', style: TextStyle(color: Colors.white.withOpacity(.72), fontSize: 11, letterSpacing: 1.6)), const SizedBox(height: 10), const Text('让灵感，\n从一句话开始。', style: TextStyle(color: Colors.white, fontSize: 22, height: 1.2, fontWeight: FontWeight.w800)), const SizedBox(height: 7), Text('探索角色、世界与无限可能。', style: TextStyle(color: Colors.white.withOpacity(.72), fontSize: 12)), const Spacer(), FilledButton.tonal(onPressed: onTap, style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: SuicangTheme.primary, padding: const EdgeInsets.symmetric(horizontal: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13))), child: const Text('＋ 新建对话', style: TextStyle(fontWeight: FontWeight.w700)))]), Positioned(right: 4, bottom: 5, child: Transform.rotate(angle: .2, child: Container(width: 68, height: 68, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFFFD5BA), Color(0xFFF0A6B8)]), borderRadius: BorderRadius.circular(24)), child: const Icon(Icons.auto_awesome, color: Colors.white, size: 31))))]));
+  Widget build(BuildContext context) => InkWell(onTap: onTap, borderRadius: BorderRadius.circular(18), child: Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(18), border: Border.all(color: SuicangTheme.line)), child: Row(children: [
+    Container(width: 56, height: 56, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFB09AFF), Color(0xFFEBC6D7)]), borderRadius: BorderRadius.circular(15)), child: const Center(child: Text('🌙', style: TextStyle(fontSize: 28)))),
+    const SizedBox(width: 13),
+    const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Luna · 月光下的旅人', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)), SizedBox(height: 5), Text('“我会带上一盏灯。”', style: TextStyle(color: SuicangTheme.muted, fontSize: 12)), SizedBox(height: 9), LinearProgressIndicator(value: .64, minHeight: 3, borderRadius: BorderRadius.all(Radius.circular(4)), color: SuicangTheme.primary, backgroundColor: SuicangTheme.line)])),
+    const SizedBox(width: 9), const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: SuicangTheme.muted),
+  ])));
 }
 
-class _SectionHeader extends StatelessWidget { const _SectionHeader({required this.title, required this.action}); final String title, action; @override Widget build(BuildContext context) => Row(children: [Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)), const Spacer(), TextButton(onPressed: () {}, style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap), child: Text('$action  ›', style: const TextStyle(color: SuicangTheme.primary, fontWeight: FontWeight.w700, fontSize: 12)))]); }
+class _CharacterRail extends StatelessWidget {
+  const _CharacterRail();
+  @override
+  Widget build(BuildContext context) => const SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [
+    _CharacterCard(emoji: '🦋', name: 'Aria', subtitle: '星海观测者', colors: [Color(0xFF8376D8), Color(0xFF302952)]),
+    SizedBox(width: 12), _CharacterCard(emoji: '🤖', name: 'Nova', subtitle: '实验助手', colors: [Color(0xFF76B1AE), Color(0xFF203F52)]),
+    SizedBox(width: 12), _CharacterCard(emoji: '🧙', name: '老法师', subtitle: '奇幻故事', colors: [Color(0xFFDB9C84), Color(0xFF5B3C65)]),
+  ]));
+}
 
-class _QuickActions extends StatelessWidget { const _QuickActions(); @override Widget build(BuildContext context) => const SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [_QuickChip(icon: Icons.auto_awesome, label: '角色扮演', active: true), SizedBox(width: 9), _QuickChip(icon: Icons.edit_note, label: '灵感写作'), SizedBox(width: 9), _QuickChip(icon: Icons.question_answer_outlined, label: '问答助手')])); }
-class _QuickChip extends StatelessWidget { const _QuickChip({required this.icon, required this.label, this.active = false}); final IconData icon; final String label; final bool active; @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12), decoration: BoxDecoration(color: active ? SuicangTheme.soft : Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: active ? SuicangTheme.primary.withOpacity(.2) : SuicangTheme.line)), child: Row(children: [Icon(icon, size: 18, color: active ? SuicangTheme.primary : SuicangTheme.ink), const SizedBox(width: 8), Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: active ? SuicangTheme.primary : SuicangTheme.ink))])); }
-
-class _ContinueCard extends StatelessWidget { const _ContinueCard(); @override Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, borderRadius: BorderRadius.circular(21), border: Border.all(color: SuicangTheme.line), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.035), blurRadius: 16, offset: const Offset(0, 6))]), child: Row(children: [Container(width: 58, height: 58, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFC9B1FF), Color(0xFFF1C5D6)]), borderRadius: BorderRadius.circular(18)), child: const Center(child: Text('🌙', style: TextStyle(fontSize: 27)))), const SizedBox(width: 12), const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Luna · 月光下的旅人', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800)), SizedBox(height: 5), Text('“如果明天就要出发，你会带上什么…”', overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 11, color: SuicangTheme.muted)), SizedBox(height: 9), LinearProgressIndicator(value: .64, minHeight: 4, borderRadius: BorderRadius.all(Radius.circular(4)), color: SuicangTheme.primary, backgroundColor: SuicangTheme.line)])), const SizedBox(width: 10), Container(width: 32, height: 32, decoration: BoxDecoration(color: SuicangTheme.soft, borderRadius: BorderRadius.circular(11)), child: const Icon(Icons.chevron_right, color: SuicangTheme.primary))])); }
-
-class _CharacterRail extends StatelessWidget { const _CharacterRail(); @override Widget build(BuildContext context) => const SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: [_CharacterCard(emoji: '🦋', name: 'Aria', tag: '幻想 · 冒险', colors: [Color(0xFF816BDC), Color(0xFF4A416B)]), SizedBox(width: 12), _CharacterCard(emoji: '🧙', name: '老法师', tag: '奇幻 · 故事', colors: [Color(0xFFE4A38E), Color(0xFF8066A9)]), SizedBox(width: 12), _CharacterCard(emoji: '🤖', name: 'Nova', tag: '科幻 · 助手', colors: [Color(0xFF5B9B9A), Color(0xFF2D4C66)])])); }
-class _CharacterCard extends StatelessWidget { const _CharacterCard({required this.emoji, required this.name, required this.tag, required this.colors}); final String emoji, name, tag; final List<Color> colors; @override Widget build(BuildContext context) => Container(width: 137, height: 150, padding: const EdgeInsets.all(13), decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors), borderRadius: BorderRadius.circular(21)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: [Text(emoji, style: const TextStyle(fontSize: 39)), const SizedBox(height: 6), Text(name, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800)), const SizedBox(height: 2), Text(tag, style: TextStyle(color: Colors.white.withOpacity(.7), fontSize: 10))])); }
-class _IconButton extends StatelessWidget { const _IconButton({required this.icon, required this.onTap}); final IconData icon; final VoidCallback onTap; @override Widget build(BuildContext context) => IconButton(onPressed: onTap, icon: Icon(icon, size: 20), style: IconButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.surface, foregroundColor: SuicangTheme.muted, fixedSize: const Size(38, 38), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: SuicangTheme.line)))); }
+class _CharacterCard extends StatelessWidget {
+  const _CharacterCard({required this.emoji, required this.name, required this.subtitle, required this.colors});
+  final String emoji, name, subtitle; final List<Color> colors;
+  @override
+  Widget build(BuildContext context) => Container(width: 152, height: 180, padding: const EdgeInsets.all(15), decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: colors), borderRadius: BorderRadius.circular(19)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: [Text(emoji, style: const TextStyle(fontSize: 48)), const SizedBox(height: 10), Text(name, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text(subtitle, style: TextStyle(color: Colors.white.withOpacity(.62), fontSize: 11))]));
+}

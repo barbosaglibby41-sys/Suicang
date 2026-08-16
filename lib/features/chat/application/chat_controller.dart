@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/storage/local_json_store.dart';
@@ -10,7 +11,7 @@ import '../domain/generation.dart';
 final chatControllerProvider = NotifierProvider<ChatController, ChatState>(ChatController.new);
 
 class ChatState {
-  const ChatState({required this.messages, required this.character, required this.sessions, this.persona = const UserPersona(), this.sessionId = 'luna-main', this.isGenerating = false, this.error, this.settings = const GenerationSettings(), this.swipeIndex = 0, this.swipeCount = 1});
+  const ChatState({required this.messages, required this.character, required this.sessions, this.persona = const UserPersona(), this.sessionId = 'luna-main', this.isGenerating = false, this.error, this.settings = const GenerationSettings(), this.swipeIndex = 0, this.swipeCount = 1, this.presetName, this.worldBookNames});
   final List<ChatMessage> messages;
   final CharacterProfile character;
   final List<ChatSessionSummary> sessions;
@@ -21,8 +22,10 @@ class ChatState {
   final GenerationSettings settings;
   final int swipeIndex;
   final int swipeCount;
+  final String? presetName;
+  final List<String>? worldBookNames;
 
-  ChatState copyWith({List<ChatMessage>? messages, CharacterProfile? character, List<ChatSessionSummary>? sessions, UserPersona? persona, String? sessionId, bool? isGenerating, String? error, GenerationSettings? settings, int? swipeIndex, int? swipeCount, bool clearError = false}) => ChatState(
+  ChatState copyWith({List<ChatMessage>? messages, CharacterProfile? character, List<ChatSessionSummary>? sessions, UserPersona? persona, String? sessionId, bool? isGenerating, String? error, GenerationSettings? settings, int? swipeIndex, int? swipeCount, String? presetName, List<String>? worldBookNames, bool clearError = false, bool clearResourceOverrides = false}) => ChatState(
         messages: messages ?? this.messages,
         character: character ?? this.character,
         sessions: sessions ?? this.sessions,
@@ -33,11 +36,15 @@ class ChatState {
         settings: settings ?? this.settings,
         swipeIndex: swipeIndex ?? this.swipeIndex,
         swipeCount: swipeCount ?? this.swipeCount,
+        presetName: clearResourceOverrides ? null : presetName ?? this.presetName,
+        worldBookNames: clearResourceOverrides ? null : worldBookNames ?? this.worldBookNames,
       );
 }
 
 class ChatController extends Notifier<ChatState> {
   final _uuid = const Uuid();
+  Timer? _persistTimer;
+  bool _persistPending = false;
   late final CharacterProfile _luna = const CharacterProfile(id: 'luna', name: 'Luna', subtitle: '月光下的旅人', emoji: '🌙', description: '一位在旧城边缘旅行的神秘旅人。她相信每一盏灯都替某个人保留着回家的方向。');
   late final CharacterProfile _aria = const CharacterProfile(id: 'aria', name: 'Aria', subtitle: '星海观测者', emoji: '🦋', description: '来自远方观测站的记录员，习惯把每段相遇写进星图。');
   late final CharacterProfile _nova = const CharacterProfile(id: 'nova', name: 'Nova', subtitle: '温柔的实验助手', emoji: '🤖', description: '一台正在学习人类情绪的实验型助手。');
@@ -59,6 +66,7 @@ class ChatController extends Notifier<ChatState> {
 
   @override
   ChatState build() {
+    ref.onDispose(() => _persistTimer?.cancel());
     _loadSessions();
     final messages = _lunaMessages();
     return ChatState(
@@ -81,30 +89,54 @@ class ChatController extends Notifier<ChatState> {
     final sessions = raw.whereType<Map>().map((item) => _sessionFromJson(Map<String, dynamic>.from(item))).toList();
     if (sessions.isEmpty) return;
     final current = sessions.first;
-    state = state.copyWith(sessions: sessions, sessionId: current.id, character: _characterById(current.characterId), messages: current.messages, clearError: true);
+    final last = current.messages.isNotEmpty && current.messages.last.role == MessageRole.assistant ? current.messages.last : null;
+    state = state.copyWith(sessions: sessions, sessionId: current.id, character: _characterById(current.characterId), messages: current.messages, presetName: current.presetName, worldBookNames: current.worldBookNames, swipeIndex: last?.activeAlternative ?? 0, swipeCount: last == null || last.alternatives.isEmpty ? 1 : last.alternatives.length, clearError: true);
   }
 
-  void _persistSessions() {
-    LocalJsonStore.write('chat_sessions', {'sessions': state.sessions.map(_sessionJson).toList()});
+  void _persistSessions({bool immediate = false}) {
+    _persistPending = true;
+    if (immediate) {
+      _persistTimer?.cancel();
+      _persistTimer = null;
+      _persistPending = false;
+      LocalJsonStore.write('chat_sessions', {'sessions': state.sessions.map(_sessionJson).toList()});
+      return;
+    }
+    if (_persistTimer != null) return;
+    _persistTimer = Timer(const Duration(milliseconds: 500), () {
+      _persistTimer = null;
+      if (!_persistPending) return;
+      _persistPending = false;
+      LocalJsonStore.write('chat_sessions', {'sessions': state.sessions.map(_sessionJson).toList()});
+    });
   }
 
-  Map<String, dynamic> _sessionJson(ChatSessionSummary session) => {'id': session.id, 'characterId': session.characterId, 'title': session.title, 'updatedAt': session.updatedAt.toIso8601String(), 'preview': session.preview, 'messages': session.messages.map((message) => {'id': message.id, 'role': message.role.name, 'content': message.content, 'createdAt': message.createdAt.toIso8601String(), 'status': message.status.name}).toList()};
+  Map<String, dynamic> _sessionJson(ChatSessionSummary session) => {'id': session.id, 'characterId': session.characterId, 'title': session.title, 'parentSessionId': session.parentSessionId, 'branchAtMessageId': session.branchAtMessageId, 'presetName': session.presetName, 'worldBookNames': session.worldBookNames, 'updatedAt': session.updatedAt.toIso8601String(), 'preview': session.preview, 'messages': session.messages.map((message) => {'id': message.id, 'role': message.role.name, 'content': message.content, 'createdAt': message.createdAt.toIso8601String(), 'status': message.status.name, 'parentId': message.parentId, 'tokenCount': message.tokenCount, 'alternatives': message.alternatives, 'activeAlternative': message.activeAlternative}).toList()};
 
-  ChatSessionSummary _sessionFromJson(Map<String, dynamic> value) => ChatSessionSummary(id: value['id'] as String? ?? _uuid.v4(), characterId: value['characterId'] as String? ?? 'luna', title: value['title'] as String? ?? '新会话', updatedAt: DateTime.tryParse(value['updatedAt'] as String? ?? '') ?? DateTime.now(), preview: value['preview'] as String? ?? '', messages: value['messages'] is List ? (value['messages'] as List).whereType<Map>().map((message) => ChatMessage(id: message['id'] as String? ?? _uuid.v4(), role: MessageRole.values.firstWhere((role) => role.name == message['role'], orElse: () => MessageRole.user), content: message['content'] as String? ?? '', createdAt: DateTime.tryParse(message['createdAt'] as String? ?? '') ?? DateTime.now(), status: MessageStatus.values.firstWhere((status) => status.name == message['status'], orElse: () => MessageStatus.complete))).toList() : const []);
+  ChatSessionSummary _sessionFromJson(Map<String, dynamic> value) => ChatSessionSummary(id: value['id'] as String? ?? _uuid.v4(), characterId: value['characterId'] as String? ?? 'luna', parentSessionId: value['parentSessionId'] as String?, branchAtMessageId: value['branchAtMessageId'] as String?, presetName: value['presetName'] as String?, worldBookNames: value['worldBookNames'] is List ? (value['worldBookNames'] as List).whereType<String>().toList() : null, title: value['title'] as String? ?? '新会话', updatedAt: DateTime.tryParse(value['updatedAt'] as String? ?? '') ?? DateTime.now(), preview: value['preview'] as String? ?? '', messages: value['messages'] is List ? (value['messages'] as List).whereType<Map>().map((message) => ChatMessage(id: message['id'] as String? ?? _uuid.v4(), role: MessageRole.values.firstWhere((role) => role.name == message['role'], orElse: () => MessageRole.user), content: message['content'] as String? ?? '', createdAt: DateTime.tryParse(message['createdAt'] as String? ?? '') ?? DateTime.now(), status: MessageStatus.values.firstWhere((status) => status.name == message['status'], orElse: () => MessageStatus.complete), parentId: message['parentId'] as String?, tokenCount: (message['tokenCount'] as num?)?.toInt(), alternatives: message['alternatives'] is List ? (message['alternatives'] as List).whereType<String>().toList() : const [], activeAlternative: (message['activeAlternative'] as num?)?.toInt() ?? 0)).toList() : const []);
 
   void selectSession(String id) {
     final session = state.sessions.firstWhere((item) => item.id == id);
     final messages = session.messages.isEmpty ? _lunaMessages() : session.messages;
-    state = state.copyWith(sessionId: id, character: _characterById(session.characterId), messages: messages, swipeIndex: 0, swipeCount: 1, clearError: true);
+    final last = messages.isNotEmpty && messages.last.role == MessageRole.assistant ? messages.last : null;
+    state = state.copyWith(sessionId: id, character: _characterById(session.characterId), messages: messages, presetName: session.presetName, worldBookNames: session.worldBookNames, swipeIndex: last?.activeAlternative ?? 0, swipeCount: last == null || last.alternatives.isEmpty ? 1 : last.alternatives.length, clearError: true);
     _persistSessions();
   }
 
   void selectCharacter(CharacterProfile character) {
     final greeting = character.card?.firstMessage.trim() ?? '';
     final messages = greeting.isEmpty ? state.messages : [ChatMessage(id: _uuid.v4(), role: MessageRole.assistant, content: greeting, createdAt: DateTime.now())];
-    state = state.copyWith(character: character, messages: messages, swipeIndex: 0, swipeCount: 1, clearError: true);
+    final sessions = state.sessions.map((session) => session.id == state.sessionId ? session.copyWith(characterId: character.id, updatedAt: DateTime.now(), messages: messages) : session).toList();
+    state = state.copyWith(character: character, sessions: sessions, messages: messages, swipeIndex: 0, swipeCount: 1, clearError: true);
+    _persistSessions(immediate: true);
   }
   void updatePersona(UserPersona persona) => state = state.copyWith(persona: persona);
+
+  void setResourceOverrides({String? presetName, List<String>? worldBookNames, bool clear = false}) {
+    final updated = state.sessions.map((session) => session.id == state.sessionId ? ChatSessionSummary(id: session.id, characterId: session.characterId, title: session.title, updatedAt: DateTime.now(), preview: session.preview, messages: session.messages, parentSessionId: session.parentSessionId, branchAtMessageId: session.branchAtMessageId, presetName: clear ? null : presetName ?? session.presetName, worldBookNames: clear ? null : worldBookNames ?? session.worldBookNames) : session).toList();
+    state = state.copyWith(sessions: updated, presetName: clear ? null : presetName ?? state.presetName, worldBookNames: clear ? null : worldBookNames ?? state.worldBookNames, clearResourceOverrides: clear);
+    _persistSessions(immediate: true);
+  }
 
   void selectGreeting(String greeting) {
     if (greeting.trim().isEmpty || state.messages.isEmpty) return;
@@ -119,6 +151,18 @@ class ChatController extends Notifier<ChatState> {
     final id = _uuid.v4();
     final session = ChatSessionSummary(id: id, title: title?.trim().isNotEmpty == true ? title!.trim() : '新会话', updatedAt: DateTime.now(), preview: '还没有消息', messages: const []);
     state = state.copyWith(sessionId: id, sessions: [session, ...state.sessions], messages: const [], swipeIndex: 0, swipeCount: 1, clearError: true);
+    _persistSessions();
+  }
+
+  void branchFromMessage(int messageIndex) {
+    if (messageIndex < 0 || messageIndex >= state.messages.length) return;
+    final messages = state.messages.take(messageIndex + 1).toList();
+    if (messages.isEmpty) return;
+    final id = _uuid.v4();
+    final source = state.sessions.firstWhere((session) => session.id == state.sessionId);
+    final branch = ChatSessionSummary(id: id, characterId: state.character.id, title: '分支 · ${source.title}', updatedAt: DateTime.now(), preview: messages.last.content, messages: messages, parentSessionId: source.id, branchAtMessageId: messages.last.id);
+    final last = messages.last.role == MessageRole.assistant ? messages.last : null;
+    state = state.copyWith(sessionId: id, sessions: [branch, ...state.sessions], messages: messages, swipeIndex: last?.activeAlternative ?? 0, swipeCount: last == null || last.alternatives.isEmpty ? 1 : last.alternatives.length, clearError: true);
     _persistSessions();
   }
 
@@ -155,9 +199,10 @@ class ChatController extends Notifier<ChatState> {
     }
   }
 
-  void _saveCurrentSession() {
+  void _saveCurrentSession({bool persist = true}) {
     final updated = state.sessions.map((session) => session.id == state.sessionId ? session.copyWith(updatedAt: DateTime.now(), preview: state.messages.isEmpty ? '还没有消息' : state.messages.last.content, messages: state.messages) : session).toList();
     state = state.copyWith(sessions: updated);
+    if (persist) _persistSessions();
   }
 
   void addUserMessage(String content) {
@@ -170,26 +215,31 @@ class ChatController extends Notifier<ChatState> {
     if (state.messages.isNotEmpty && state.messages.last.role == MessageRole.assistant && state.messages.last.status == MessageStatus.streaming) {
       final last = state.messages.last;
       state = state.copyWith(messages: [...state.messages.take(state.messages.length - 1), last.copyWith(content: last.content + delta)]);
-      _saveCurrentSession();
     } else {
       state = state.copyWith(messages: [...state.messages, ChatMessage(id: _uuid.v4(), role: MessageRole.assistant, content: delta, createdAt: DateTime.now(), status: MessageStatus.streaming)]);
-      _saveCurrentSession();
     }
   }
 
   void finishAssistant() {
     if (state.messages.isEmpty || state.messages.last.role != MessageRole.assistant) return;
     final last = state.messages.last;
-    state = state.copyWith(messages: [...state.messages.take(state.messages.length - 1), last.copyWith(status: MessageStatus.complete)], isGenerating: false, swipeIndex: 0, swipeCount: 1);
-    _saveCurrentSession();
+    final alternatives = last.alternatives.isEmpty ? [last.content] : last.alternatives;
+    final activeIndex = alternatives.indexOf(last.content).clamp(0, alternatives.length - 1).toInt();
+    state = state.copyWith(messages: [...state.messages.take(state.messages.length - 1), last.copyWith(status: MessageStatus.complete, alternatives: alternatives, activeAlternative: activeIndex)], isGenerating: false, swipeIndex: activeIndex, swipeCount: alternatives.length);
+    _saveCurrentSession(persist: false);
+    _persistSessions(immediate: true);
   }
 
   void swipeLastAssistant() {
     if (state.isGenerating || state.messages.isEmpty || state.messages.last.role != MessageRole.assistant) return;
     final current = state.messages.last;
-    const alternatives = ['Luna 没有立刻回答。她把那盏灯接过去，掌心护住微弱的火光。“这样的话，天亮以前我们都不会走散。”', '她望向远处的城墙，轻轻点头。“那就出发吧。灯光会替我们记住来时的路。”'];
-    final nextIndex = state.swipeCount % alternatives.length;
-    state = state.copyWith(messages: [...state.messages.take(state.messages.length - 1), current.copyWith(content: alternatives[nextIndex], status: MessageStatus.complete)], swipeIndex: nextIndex + 1, swipeCount: state.swipeCount + 1);
+    const demoAlternatives = ['Luna 没有立刻回答。她把那盏灯接过去，掌心护住微弱的火光。“这样的话，天亮以前我们都不会走散。”', '她望向远处的城墙，轻轻点头。“那就出发吧。灯光会替我们记住来时的路。”'];
+    final alternatives = current.alternatives.isEmpty ? [current.content, ...demoAlternatives.where((item) => item != current.content)] : current.alternatives;
+    final nextIndex = (current.activeAlternative + 1) % alternatives.length;
+    final updated = current.copyWith(content: alternatives[nextIndex], alternatives: alternatives, activeAlternative: nextIndex, status: MessageStatus.complete);
+    state = state.copyWith(messages: [...state.messages.take(state.messages.length - 1), updated], swipeIndex: nextIndex, swipeCount: alternatives.length);
+    _saveCurrentSession();
+    _persistSessions();
   }
 
   void updateSettings(GenerationSettings settings) => state = state.copyWith(settings: settings);

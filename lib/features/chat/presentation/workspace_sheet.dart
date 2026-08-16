@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../application/chat_controller.dart';
 import '../domain/chat_workspace.dart';
+import '../../settings/domain/preset_models.dart';
 import '../../characters/domain/character_card.dart';
 import '../../../core/theme/suicang_theme.dart';
 
 class WorkspaceSheet extends StatefulWidget {
-  const WorkspaceSheet({required this.state, required this.characters, required this.onSessionSelected, required this.onCharacterSelected, required this.onPersonaChanged, required this.onGreetingSelected, required this.onNewSession, required this.onRenameSession, required this.onDeleteSession, super.key});
+  const WorkspaceSheet({required this.state, required this.characters, required this.onSessionSelected, required this.onCharacterSelected, required this.onPersonaChanged, required this.onGreetingSelected, required this.onNewSession, required this.onRenameSession, required this.onDeleteSession, required this.onParentSession, required this.preset, required this.worldBooks, required this.onResourcesChanged, super.key});
   final ChatState state;
   final List<CharacterCard> characters;
   final ValueChanged<String> onSessionSelected;
@@ -15,6 +16,10 @@ class WorkspaceSheet extends StatefulWidget {
   final VoidCallback onNewSession;
   final void Function(String id, String title) onRenameSession;
   final ValueChanged<String> onDeleteSession;
+  final ValueChanged<String> onParentSession;
+  final PromptPreset preset;
+  final List<WorldBook> worldBooks;
+  final void Function(String? presetName, List<String>? worldBookNames) onResourcesChanged;
 
   @override
   State<WorkspaceSheet> createState() => _WorkspaceSheetState();
@@ -37,6 +42,8 @@ class _WorkspaceSheetState extends State<WorkspaceSheet> {
             const Text('角色、会话和 Persona 都属于当前聊天上下文。', style: TextStyle(fontSize: 12, color: SuicangTheme.muted)),
             const SizedBox(height: 18),
             _CharacterCard(character: _character, onTap: _selectCharacter),
+            const SizedBox(height: 14),
+            _ResourceBindingCard(preset: widget.preset, worldBooks: widget.worldBooks, selectedPreset: widget.state.presetName, selectedWorldBooks: widget.state.worldBookNames, onChanged: widget.onResourcesChanged),
             if (_character.card?.alternateGreetings.isNotEmpty == true) ...[
               const SizedBox(height: 12),
               _GreetingPicker(greetings: _character.card!.alternateGreetings, onSelected: widget.onGreetingSelected),
@@ -44,7 +51,7 @@ class _WorkspaceSheetState extends State<WorkspaceSheet> {
             const SizedBox(height: 20),
             Row(children: [const Expanded(child: _SheetTitle(icon: Icons.forum_outlined, title: '会话')), IconButton(tooltip: '新建会话', onPressed: widget.onNewSession, icon: const Icon(Icons.add_circle_outline))]),
             const SizedBox(height: 8),
-            ...widget.state.sessions.map((session) => _SessionTile(session: session, selected: session.id == widget.state.sessionId, onTap: () => widget.onSessionSelected(session.id), onRename: () => _rename(session), onDelete: () => widget.onDeleteSession(session.id))),
+            ..._orderedSessions(widget.state.sessions).map((item) { final session = item.session; return _SessionTile(session: session, depth: item.depth, selected: session.id == widget.state.sessionId, onTap: () => widget.onSessionSelected(session.id), onRename: () => _rename(session), onDelete: () => widget.onDeleteSession(session.id), onParent: session.parentSessionId == null ? null : () => widget.onParentSession(session.parentSessionId!)); }),
             const SizedBox(height: 18),
             const _SheetTitle(icon: Icons.badge_outlined, title: '用户 Persona'),
             const SizedBox(height: 8),
@@ -66,6 +73,66 @@ class _WorkspaceSheetState extends State<WorkspaceSheet> {
     final options = widget.characters.map((card) => CharacterProfile(id: card.id, name: card.name, subtitle: card.tagline, emoji: card.avatar, avatarData: card.avatarData, description: card.description, card: card)).toList();
     showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: options.map((option) => ListTile(leading: Text(option.emoji, style: const TextStyle(fontSize: 26)), title: Text(option.name), subtitle: Text(option.subtitle), trailing: option.id == _character.id ? const Icon(Icons.check, color: SuicangTheme.primary) : null, onTap: () { setState(() => _character = option); widget.onCharacterSelected(option); Navigator.pop(context); })).toList())));
   }
+}
+
+class _SessionTreeItem {
+  const _SessionTreeItem(this.session, this.depth);
+  final ChatSessionSummary session;
+  final int depth;
+}
+
+List<_SessionTreeItem> _orderedSessions(List<ChatSessionSummary> sessions) {
+  final byParent = <String?, List<ChatSessionSummary>>{};
+  final ids = sessions.map((session) => session.id).toSet();
+  for (final session in sessions) {
+    final parent = session.parentSessionId != null && ids.contains(session.parentSessionId) ? session.parentSessionId : null;
+    byParent.putIfAbsent(parent, () => []).add(session);
+  }
+  final result = <_SessionTreeItem>[];
+  final visited = <String>{};
+  void visit(String? parentId, int depth) {
+    for (final session in byParent[parentId] ?? const <ChatSessionSummary>[]) {
+      if (!visited.add(session.id)) continue;
+      result.add(_SessionTreeItem(session, depth));
+      visit(session.id, depth + 1);
+    }
+  }
+  visit(null, 0);
+  for (final session in sessions) {
+    if (visited.add(session.id)) result.add(_SessionTreeItem(session, 0));
+  }
+  return result;
+}
+
+class _ResourceBindingCard extends StatefulWidget {
+  const _ResourceBindingCard({required this.preset, required this.worldBooks, required this.selectedPreset, required this.selectedWorldBooks, required this.onChanged});
+  final PromptPreset preset;
+  final List<WorldBook> worldBooks;
+  final String? selectedPreset;
+  final List<String>? selectedWorldBooks;
+  final void Function(String? presetName, List<String>? worldBookNames) onChanged;
+
+  @override
+  State<_ResourceBindingCard> createState() => _ResourceBindingCardState();
+}
+
+class _ResourceBindingCardState extends State<_ResourceBindingCard> {
+  late String? _preset = widget.selectedPreset;
+  late Set<String> _books = {...?widget.selectedWorldBooks};
+
+  void _emit() => widget.onChanged(_preset, _books.isEmpty ? null : _books.toList());
+
+  @override
+  Widget build(BuildContext context) => Container(padding: const EdgeInsets.all(13), decoration: BoxDecoration(color: SuicangTheme.soft, borderRadius: BorderRadius.circular(16)), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(children: [const Icon(Icons.link_rounded, size: 18, color: SuicangTheme.primary), const SizedBox(width: 7), const Expanded(child: Text('本会话资源', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800))), if (_preset != null || _books.isNotEmpty) TextButton(onPressed: () { setState(() { _preset = null; _books.clear(); }); _emit(); }, child: const Text('恢复默认', style: TextStyle(fontSize: 11)))]),
+    const SizedBox(height: 5),
+    Text(_preset == null ? '预设：继承全局「${widget.preset.name}」' : '预设：固定「${widget.preset.name}」', style: const TextStyle(fontSize: 11, color: SuicangTheme.muted)),
+    SwitchListTile(contentPadding: EdgeInsets.zero, dense: true, title: const Text('固定当前预设', style: TextStyle(fontSize: 12)), value: _preset != null, onChanged: (value) { setState(() => _preset = value ? widget.preset.name : null); _emit(); }),
+    if (widget.worldBooks.isNotEmpty) ...[
+      const Text('本会话启用的世界书', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+      ...widget.worldBooks.map((book) => CheckboxListTile(contentPadding: EdgeInsets.zero, dense: true, title: Text(book.name, style: const TextStyle(fontSize: 11)), subtitle: Text('${book.entries.length} 个条目', style: const TextStyle(fontSize: 10)), value: _books.contains(book.name), onChanged: (value) { setState(() { if (value == true) _books.add(book.name); else _books.remove(book.name); }); _emit(); })),
+    ] else const Padding(padding: EdgeInsets.only(top: 6), child: Text('暂无全局世界书，角色卡 Character Book 仍会参与注入。', style: TextStyle(fontSize: 10, color: SuicangTheme.muted))),
+  ]));
 }
 
 class _CharacterCard extends StatelessWidget {
@@ -95,23 +162,25 @@ class _SheetTitle extends StatelessWidget {
 }
 
 class _SessionTile extends StatelessWidget {
-  const _SessionTile({required this.session, required this.selected, required this.onTap, required this.onRename, required this.onDelete});
+  const _SessionTile({required this.session, required this.depth, required this.selected, required this.onTap, required this.onRename, required this.onDelete, this.onParent});
   final ChatSessionSummary session;
+  final int depth;
   final bool selected;
   final VoidCallback onTap;
   final VoidCallback onRename;
   final VoidCallback onDelete;
+  final VoidCallback? onParent;
 
   @override
   Widget build(BuildContext context) => ListTile(
         dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        contentPadding: EdgeInsets.only(left: 10 + depth * 18, right: 10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         tileColor: selected ? SuicangTheme.soft : null,
         leading: Icon(selected ? Icons.chat_bubble : Icons.chat_bubble_outline, size: 18, color: selected ? SuicangTheme.primary : SuicangTheme.muted),
         title: Text(session.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-        subtitle: Text(session.preview, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: SuicangTheme.muted)),
-        trailing: Row(mainAxisSize: MainAxisSize.min, children: [if (selected) const Icon(Icons.check_circle, size: 17, color: SuicangTheme.primary), PopupMenuButton<String>(onSelected: (value) { if (value == 'rename') onRename(); if (value == 'delete') onDelete(); }, itemBuilder: (_) => const [PopupMenuItem(value: 'rename', child: Text('重命名')), PopupMenuItem(value: 'delete', child: Text('删除'))])]),
+        subtitle: Text(session.parentSessionId == null ? session.preview : '分支起点：${session.preview}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11, color: SuicangTheme.muted)),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [if (session.parentSessionId != null) const Icon(Icons.account_tree_outlined, size: 16, color: SuicangTheme.primary), if (selected) const Icon(Icons.check_circle, size: 17, color: SuicangTheme.primary), PopupMenuButton<String>(onSelected: (value) { if (value == 'parent' && onParent != null) onParent!(); if (value == 'rename') onRename(); if (value == 'delete') onDelete(); }, itemBuilder: (_) => [if (onParent != null) const PopupMenuItem(value: 'parent', child: Text('跳转到父会话')), const PopupMenuItem(value: 'rename', child: Text('重命名')), const PopupMenuItem(value: 'delete', child: Text('删除'))])]),
         onTap: onTap,
       );
 }

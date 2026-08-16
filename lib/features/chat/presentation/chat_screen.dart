@@ -52,6 +52,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         onNewSession: () { ref.read(chatControllerProvider.notifier).createSession(); Navigator.pop(context); },
         onRenameSession: (id, title) => ref.read(chatControllerProvider.notifier).renameSession(id, title),
         onDeleteSession: (id) => ref.read(chatControllerProvider.notifier).deleteSession(id),
+        onParentSession: (id) { ref.read(chatControllerProvider.notifier).selectSession(id); Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已返回父会话'))); },
+        preset: ref.read(resourceLibraryProvider).preset,
+        worldBooks: ref.read(resourceLibraryProvider).worldBooks,
+        onResourcesChanged: (presetName, worldBookNames) => ref.read(chatControllerProvider.notifier).setResourceOverrides(presetName: presetName, worldBookNames: worldBookNames),
       ),
     );
   }
@@ -71,7 +75,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   void _openContextDebug(ChatState chat) {
     final resources = ref.read(resourceLibraryProvider);
-    showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => ContextDebugSheet(characterName: chat.character.name, preset: resources.preset, worldBooks: resources.worldBooks));
+    final books = chat.worldBookNames == null ? resources.worldBooks : resources.worldBooks.where((book) => chat.worldBookNames!.contains(book.name)).toList();
+    showModalBottomSheet<void>(context: context, showDragHandle: true, builder: (_) => ContextDebugSheet(character: chat.character, persona: chat.persona, history: chat.messages, settings: chat.settings, preset: resources.preset, worldBooks: books));
   }
 
   Future<void> _send({String? retryText}) async {
@@ -88,6 +93,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     final providerConfig = ref.read(providerConfigProvider);
     final resources = ref.read(resourceLibraryProvider);
+    final activePreset = requestChat.presetName == null ? resources.preset : resources.preset;
+    final activeBooks = requestChat.worldBookNames == null ? resources.worldBooks : resources.worldBooks.where((book) => requestChat.worldBookNames!.contains(book.name)).toList();
     if (!providerConfig.isReady) {
       await Future<void>.delayed(const Duration(milliseconds: 900));
       if (!mounted) return;
@@ -96,7 +103,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return;
     }
 
-    final request = ChatContextBuilder.build(character: requestChat.character, persona: requestChat.persona, history: requestChat.messages, settings: requestChat.settings.copyWith(model: providerConfig.model), preset: resources.preset, worldBooks: resources.worldBooks);
+    final request = ChatContextBuilder.build(character: requestChat.character, persona: requestChat.persona, history: requestChat.messages, settings: requestChat.settings.copyWith(model: providerConfig.model), preset: activePreset, worldBooks: activeBooks);
     final provider = OpenAiCompatibleProvider(baseUrl: providerConfig.baseUrl, apiKey: providerConfig.apiKey);
     try {
       await for (final event in provider.generate(request)) {
@@ -123,21 +130,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final chat = ref.watch(chatControllerProvider);
     final controller = ref.read(chatControllerProvider.notifier);
     final lastAssistantIndex = chat.messages.lastIndexWhere((message) => message.role == MessageRole.assistant);
-    final messageItems = <Widget>[
-      const _DateDivider(),
-      for (var index = 0; index < chat.messages.length; index++)
-        _MessageTile(
-          message: chat.messages[index],
-          avatar: chat.character.emoji,
-          avatarData: chat.character.avatarData,
-          swipeIndex: index == lastAssistantIndex ? chat.swipeIndex : 0,
-          swipeCount: index == lastAssistantIndex ? chat.swipeCount : 1,
-          onSwipe: index == lastAssistantIndex ? controller.swipeLastAssistant : null,
-        ),
-      if (chat.isGenerating) const _TypingTile() else if (chat.error != null) GenerationErrorCard(message: chat.error!, onRetry: () => _send(retryText: _lastUserText(chat.messages))) else const _ConversationEnd(),
-      const SizedBox(height: 8),
-    ];
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Column(
@@ -151,10 +143,34 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   alignment: Alignment.topCenter,
                   child: SizedBox(
                     width: maxWidth,
-                    child: ListView(
+                    child: ListView.builder(
                       controller: _scroll,
                       padding: const EdgeInsets.fromLTRB(18, 22, 18, 28),
-                      children: messageItems,
+                      itemCount: chat.messages.length + 3,
+                      itemBuilder: (context, index) {
+                        if (index == 0) return const _DateDivider();
+                        if (index <= chat.messages.length) {
+                          final messageIndex = index - 1;
+                          final message = chat.messages[messageIndex];
+                          return _MessageTile(
+                            message: message,
+                            avatar: chat.character.emoji,
+                            avatarData: chat.character.avatarData,
+                            swipeIndex: messageIndex == lastAssistantIndex ? chat.swipeIndex : 0,
+                            swipeCount: messageIndex == lastAssistantIndex ? chat.swipeCount : 1,
+                            onSwipe: messageIndex == lastAssistantIndex ? controller.swipeLastAssistant : null,
+                            onBranch: () => controller.branchFromMessage(messageIndex),
+                          );
+                        }
+                        if (index == chat.messages.length + 1) {
+                          return chat.isGenerating
+                              ? const _TypingTile()
+                              : chat.error != null
+                                  ? GenerationErrorCard(message: chat.error!, onRetry: () => _send(retryText: _lastUserText(chat.messages)))
+                                  : const _ConversationEnd();
+                        }
+                        return const SizedBox(height: 8);
+                      },
                     ),
                   ),
                 );
@@ -180,10 +196,12 @@ class _ChatHeader extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final surface = scheme.surface;
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 11),
+      margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+      padding: const EdgeInsets.fromLTRB(8, 7, 8, 7),
       decoration: BoxDecoration(
-        color: surface,
-        border: Border(bottom: BorderSide(color: scheme.outlineVariant)),
+        color: surface.withOpacity(.84),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.outlineVariant.withOpacity(.6)),
       ),
       child: Row(
         children: [
@@ -194,12 +212,12 @@ class _ChatHeader extends StatelessWidget {
           ),
           _CharacterAvatar(size: 43, emoji: character.emoji, avatarData: character.avatarData),
           const SizedBox(width: 11),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(character.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Row(
                   children: [
                     Icon(Icons.circle, size: 7, color: Color(0xFF4BC48A)),
@@ -254,13 +272,14 @@ class _DateDivider extends StatelessWidget {
 }
 
 class _MessageTile extends StatelessWidget {
-  const _MessageTile({required this.message, required this.avatar, this.avatarData, this.swipeIndex = 0, this.swipeCount = 1, this.onSwipe});
+  const _MessageTile({required this.message, required this.avatar, this.avatarData, this.swipeIndex = 0, this.swipeCount = 1, this.onSwipe, this.onBranch});
   final ChatMessage message;
   final String avatar;
   final String? avatarData;
   final int swipeIndex;
   final int swipeCount;
   final VoidCallback? onSwipe;
+  final VoidCallback? onBranch;
 
   @override
   Widget build(BuildContext context) {
@@ -269,34 +288,28 @@ class _MessageTile extends StatelessWidget {
     final surface = scheme.surface;
     final bubbleText = scheme.onSurface;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 22),
+      padding: const EdgeInsets.only(bottom: 26),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: user ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          if (!user) ...[_CharacterAvatar(size: 31, emoji: ref.read(chatControllerProvider).character.emoji, avatarData: ref.read(chatControllerProvider).character.avatarData), const SizedBox(width: 9)],
+          if (!user) ...[_CharacterAvatar(size: 31, emoji: avatar, avatarData: avatarData), const SizedBox(width: 9)],
           Flexible(
             child: Column(
               crossAxisAlignment: user ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 Container(
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  constraints: const BoxConstraints(maxWidth: 590),
+                  padding: user ? const EdgeInsets.symmetric(horizontal: 17, vertical: 13) : const EdgeInsets.fromLTRB(4, 2, 12, 4),
                   decoration: BoxDecoration(
-                    color: user ? SuicangTheme.primary : surface,
-                    gradient: user ? SuicangTheme.brandGradient : null,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(19),
-                      topRight: const Radius.circular(19),
-                      bottomLeft: Radius.circular(user ? 19 : 5),
-                      bottomRight: Radius.circular(user ? 5 : 19),
-                    ),
-                    border: user ? null : Border.all(color: scheme.outlineVariant),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(.025), blurRadius: 12, offset: const Offset(0, 4))],
+                    color: user ? surface : Colors.transparent,
+                    borderRadius: BorderRadius.circular(17),
+                    border: user ? Border.all(color: scheme.outlineVariant.withOpacity(.7)) : null,
+                    boxShadow: user ? [BoxShadow(color: Colors.black.withOpacity(.045), blurRadius: 14, offset: const Offset(0, 6))] : null,
                   ),
                   child: SelectableText(
                     message.content,
-                    style: TextStyle(color: user ? Colors.white : bubbleText, height: 1.52, fontSize: 14),
+                    style: TextStyle(color: bubbleText, height: 1.62, fontSize: user ? 14 : 15),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -313,7 +326,19 @@ class _MessageTile extends StatelessWidget {
                       ],
                       _MessageAction(icon: Icons.copy_outlined, tooltip: '复制'),
                       _MessageAction(icon: Icons.refresh_rounded, tooltip: '重新生成', onPressed: onSwipe),
-                      _MessageAction(icon: Icons.more_horiz, tooltip: '更多'),
+                      if (onBranch != null)
+                        PopupMenuButton<String>(
+                          tooltip: '更多',
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.more_horiz, size: 16, color: SuicangTheme.muted),
+                          onSelected: (value) {
+                            if (value == 'branch') {
+                              onBranch!();
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已从此处创建对话分支')));
+                            }
+                          },
+                          itemBuilder: (_) => const [PopupMenuItem(value: 'branch', child: Text('从这里创建分支'))],
+                        ),
                     ],
                   ],
                 ),
@@ -409,10 +434,10 @@ class _Composer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final surface = scheme.surface;
-    final fieldFill = scheme.surfaceContainerHighest;
+    final fieldFill = scheme.surface;
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-      decoration: BoxDecoration(color: surface, border: Border(top: BorderSide(color: scheme.outlineVariant))),
+      padding: const EdgeInsets.fromLTRB(18, 8, 18, 88),
+      decoration: const BoxDecoration(color: Colors.transparent),
       child: SafeArea(
         top: false,
         child: Column(
@@ -445,8 +470,10 @@ class _Composer extends StatelessWidget {
                       hintStyle: const TextStyle(fontSize: 13, color: SuicangTheme.muted),
                       filled: true,
                       fillColor: fieldFill,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(18), borderSide: BorderSide.none),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(21), borderSide: BorderSide(color: scheme.outlineVariant.withOpacity(.75))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(21), borderSide: BorderSide(color: scheme.outlineVariant.withOpacity(.75))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(21), borderSide: const BorderSide(color: SuicangTheme.primary, width: 1.4)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 14),
                     ),
                   ),
                 ),

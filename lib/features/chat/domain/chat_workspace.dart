@@ -23,14 +23,18 @@ class UserPersona {
 }
 
 class ChatSessionSummary {
-  const ChatSessionSummary({required this.id, required this.title, required this.updatedAt, required this.preview, required this.messages, this.characterId = 'luna'});
+  const ChatSessionSummary({required this.id, required this.title, required this.updatedAt, required this.preview, required this.messages, this.characterId = 'luna', this.parentSessionId, this.branchAtMessageId, this.presetName, this.worldBookNames});
 
   final String id;
   final String characterId;
+  final String? parentSessionId;
+  final String? branchAtMessageId;
+  final String? presetName;
+  final List<String>? worldBookNames;
   final String title;
   final DateTime updatedAt;
   final String preview;
   final List<ChatMessage> messages;
 
-  ChatSessionSummary copyWith({String? title, DateTime? updatedAt, String? preview, List<ChatMessage>? messages, String? characterId}) => ChatSessionSummary(id: id, title: title ?? this.title, updatedAt: updatedAt ?? this.updatedAt, preview: preview ?? this.preview, messages: messages ?? this.messages, characterId: characterId ?? this.characterId);
+  ChatSessionSummary copyWith({String? title, DateTime? updatedAt, String? preview, List<ChatMessage>? messages, String? characterId, String? parentSessionId, String? branchAtMessageId, String? presetName, List<String>? worldBookNames}) => ChatSessionSummary(id: id, title: title ?? this.title, updatedAt: updatedAt ?? this.updatedAt, preview: preview ?? this.preview, messages: messages ?? this.messages, characterId: characterId ?? this.characterId, parentSessionId: parentSessionId ?? this.parentSessionId, branchAtMessageId: branchAtMessageId ?? this.branchAtMessageId, presetName: presetName ?? this.presetName, worldBookNames: worldBookNames ?? this.worldBookNames);
 }

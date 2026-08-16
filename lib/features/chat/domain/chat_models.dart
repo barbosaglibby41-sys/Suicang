@@ -11,6 +11,8 @@ class ChatMessage {
     this.status = MessageStatus.complete,
     this.parentId,
     this.tokenCount,
+    this.alternatives = const [],
+    this.activeAlternative = 0,
   });
 
   final String id;
@@ -20,11 +22,15 @@ class ChatMessage {
   final MessageStatus status;
   final String? parentId;
   final int? tokenCount;
+  final List<String> alternatives;
+  final int activeAlternative;
 
   ChatMessage copyWith({
     String? content,
     MessageStatus? status,
     int? tokenCount,
+    List<String>? alternatives,
+    int? activeAlternative,
   }) => ChatMessage(
     id: id,
     role: role,
@@ -33,6 +39,8 @@ class ChatMessage {
     status: status ?? this.status,
     parentId: parentId,
     tokenCount: tokenCount ?? this.tokenCount,
+    alternatives: alternatives ?? this.alternatives,
+    activeAlternative: activeAlternative ?? this.activeAlternative,
   );
 }
 
