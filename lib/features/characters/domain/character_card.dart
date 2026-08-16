@@ -6,7 +6,6 @@ class CharacterCard {
     required this.avatar,
     required this.description,
     this.avatarData,
-
     this.personality = '',
     this.scenario = '',
     this.firstMessage = '',
@@ -40,7 +39,26 @@ class CharacterCard {
   final String source;
   final List<String> tags;
 
-  CharacterCard copyWith({String? name, String? tagline, String? avatar, String? avatarData, String? description, String? personality, String? scenario, String? firstMessage, String? exampleMessages, String? systemPrompt, String? postHistoryInstructions, List<String>? alternateGreetings, String? creatorNotes, CharacterBook? characterBook, Map<String, dynamic>? extensions, String? source, List<String>? tags, bool clearCharacterBook = false}) => CharacterCard(
+  CharacterCard copyWith(
+          {String? name,
+          String? tagline,
+          String? avatar,
+          String? avatarData,
+          String? description,
+          String? personality,
+          String? scenario,
+          String? firstMessage,
+          String? exampleMessages,
+          String? systemPrompt,
+          String? postHistoryInstructions,
+          List<String>? alternateGreetings,
+          String? creatorNotes,
+          CharacterBook? characterBook,
+          Map<String, dynamic>? extensions,
+          String? source,
+          List<String>? tags,
+          bool clearCharacterBook = false}) =>
+      CharacterCard(
         id: id,
         name: name ?? this.name,
         tagline: tagline ?? this.tagline,
@@ -52,10 +70,12 @@ class CharacterCard {
         firstMessage: firstMessage ?? this.firstMessage,
         exampleMessages: exampleMessages ?? this.exampleMessages,
         systemPrompt: systemPrompt ?? this.systemPrompt,
-        postHistoryInstructions: postHistoryInstructions ?? this.postHistoryInstructions,
+        postHistoryInstructions:
+            postHistoryInstructions ?? this.postHistoryInstructions,
         alternateGreetings: alternateGreetings ?? this.alternateGreetings,
         creatorNotes: creatorNotes ?? this.creatorNotes,
-        characterBook: clearCharacterBook ? null : characterBook ?? this.characterBook,
+        characterBook:
+            clearCharacterBook ? null : characterBook ?? this.characterBook,
         extensions: extensions ?? this.extensions,
         source: source ?? this.source,
         tags: tags ?? this.tags,
@@ -69,7 +89,14 @@ class CharacterBook {
 }
 
 class WorldBookEntry {
-  const WorldBookEntry({required this.id, required this.keys, required this.content, this.constant = false, this.selective = true, this.enabled = true, this.position = 'before_char'});
+  const WorldBookEntry(
+      {required this.id,
+      required this.keys,
+      required this.content,
+      this.constant = false,
+      this.selective = true,
+      this.enabled = true,
+      this.position = 'before_char'});
   final String id;
   final List<String> keys;
   final String content;
