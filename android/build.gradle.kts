@@ -20,14 +20,12 @@ subprojects {
 }
 
 subprojects {
-    plugins.withId("com.android.application") {
-        extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
-            compileSdk = 36
-        }
-    }
-    plugins.withId("com.android.library") {
-        extensions.configure<com.android.build.api.dsl.LibraryExtension> {
-            compileSdk = 36
+    afterEvaluate {
+        extensions.findByName("android")?.let { androidExtension ->
+            when (androidExtension) {
+                is com.android.build.gradle.AppExtension -> androidExtension.compileSdkVersion = "android-36"
+                is com.android.build.gradle.LibraryExtension -> androidExtension.compileSdkVersion = "android-36"
+            }
         }
     }
 }
