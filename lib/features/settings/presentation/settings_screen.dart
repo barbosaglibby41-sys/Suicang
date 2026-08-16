@@ -152,7 +152,24 @@ class _PresetCard extends StatelessWidget {
   final VoidCallback onNodes;
   final VoidCallback onExport;
   @override
-  Widget build(BuildContext context) => _Panel(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [Container(width: 42, height: 42, decoration: BoxDecoration(color: SuicangTheme.soft, borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.tune, color: SuicangTheme.primary)), const SizedBox(width: 11), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(preset.name, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text('${preset.model}  ·  Temperature ${preset.temperature.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, color: SuicangTheme.muted))])), IconButton(tooltip: '提示词节点', onPressed: onNodes, icon: const Icon(Icons.account_tree_outlined)), IconButton(tooltip: '导出预设', onPressed: onExport, icon: const Icon(Icons.file_download_outlined)), IconButton(tooltip: '编辑预设', onPressed: onEdit, icon: const Icon(Icons.edit_outlined)), IconButton(tooltip: '导入预设', onPressed: onImport, icon: const Icon(Icons.file_upload_outlined))]), const SizedBox(height: 13), Row(children: [_Metric(label: 'Top P', value: preset.topP.toStringAsFixed(2)), _Metric(label: '最大输出', value: '${preset.maxTokens}'), _Metric(label: '来源', value: preset.source)]))]));
+  Widget build(BuildContext context) => _Panel(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(children: [
+          Container(width: 42, height: 42, decoration: BoxDecoration(color: SuicangTheme.soft, borderRadius: BorderRadius.circular(13)), child: const Icon(Icons.tune, color: SuicangTheme.primary)),
+          const SizedBox(width: 11),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(preset.name, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), Text('${preset.model}  ·  Temperature ${preset.temperature.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, color: SuicangTheme.muted))])),
+          IconButton(tooltip: '提示词节点', onPressed: onNodes, icon: const Icon(Icons.account_tree_outlined)),
+          IconButton(tooltip: '导出预设', onPressed: onExport, icon: const Icon(Icons.file_download_outlined)),
+          IconButton(tooltip: '编辑预设', onPressed: onEdit, icon: const Icon(Icons.edit_outlined)),
+          IconButton(tooltip: '导入预设', onPressed: onImport, icon: const Icon(Icons.file_upload_outlined)),
+        ]),
+        const SizedBox(height: 13),
+        Row(children: [_Metric(label: 'Top P', value: preset.topP.toStringAsFixed(2)), _Metric(label: '最大输出', value: '${preset.maxTokens}'), _Metric(label: '来源', value: preset.source)]),
+      ],
+    ),
+  );
 }
 
 class _PresetEditor extends ConsumerStatefulWidget {
