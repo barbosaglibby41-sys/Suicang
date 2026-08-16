@@ -44,10 +44,17 @@ jobs:
           flutter build ipa --release --no-codesign
           status=$?
           set -e
-          echo "Flutter exited with $status; validating unsigned archive output"
-          APP="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
-          test -f "$APP/Info.plist"
-          test -f "$APP/Runner"
+          echo "Flutter exited with $status; locating complete app bundle"
+          APP=""
+          while IFS= read -r candidate; do
+            [[ -f "$candidate/Info.plist" ]] || continue
+            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$candidate/Info.plist" 2>/dev/null || true)
+            [[ -n "$executable" && -f "$candidate/$executable" ]] || continue
+            APP="$candidate"
+            break
+          done < <(find build/ios -type d -name '*.app' -print)
+          test -n "$APP"
+          echo "Selected app bundle: $APP"
           echo "APP_BUNDLE=$APP" >> "$GITHUB_ENV"
 
       - name: Package and validate unsigned IPA
@@ -56,13 +63,29 @@ jobs:
           set -euo pipefail
           VERSION="${{ inputs.version || '1.01' }}"
           APP="${APP_BUNDLE}"
+          test -f "$APP/Info.plist"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
+          test -f "$APP/$executable"
           mkdir -p build/Payload
           cp -R "$APP" build/Payload/Suicang.app
-          cp -R build/ios/archive/Runner.xcarchive build/Suicang.xcarchive
+          ARCHIVE=$(find build/ios -type d -name '*.xcarchive' -print -quit)
+          if [[ -n "$ARCHIVE" ]]; then
+            cp -R "$ARCHIVE" build/Suicang.xcarchive
+          fi
+
+      - name: Create and validate unsigned IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ inputs.version || '1.01' }}"
+          APP="${APP_BUNDLE}"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
+          mkdir -p build/Payload
+          cp -R "$APP" build/Payload/Suicang.app
           ditto -c -k --sequesterRsrc --keepParent build/Payload "build/Suicang-${VERSION}-unsigned.ipa"
           unzip -t "build/Suicang-${VERSION}-unsigned.ipa"
           unzip -p "build/Suicang-${VERSION}-unsigned.ipa" Payload/Suicang.app/Info.plist >/dev/null
-          unzip -p "build/Suicang-${VERSION}-unsigned.ipa" Payload/Suicang.app/Runner >/dev/null
+          unzip -p "build/Suicang-${VERSION}-unsigned.ipa" "Payload/Suicang.app/$executable" >/dev/null
           shasum -a 256 "build/Suicang-${VERSION}-unsigned.ipa" > "build/Suicang-${VERSION}-unsigned.ipa.sha256"
 
       - name: Upload validated unsigned archive and IPA
