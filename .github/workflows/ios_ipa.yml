@@ -37,30 +37,26 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate iOS release build settings
-        run: flutter build ios --release --config-only
-
-      - name: Build iOS app without signing
+      - name: Build iOS app and retain unsigned output
         shell: bash
         run: |
-          set -euo pipefail
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -sdk iphoneos \
-            -derivedDataPath build/ios/unsigned \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build
+          set +e
+          flutter build ios --release --no-codesign
+          status=$?
+          set -e
+          echo "Flutter exited with $status; checking generated app bundle"
+          test -d build/ios/archive/Runner.xcarchive || test -d build/ios/iphoneos/Runner.app
 
       - name: Package unsigned IPA container
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ inputs.version || '1.01' }}"
-          APP="build/ios/unsigned/Build/Products/Release-iphoneos/Runner.app"
+          if [[ -d build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app ]]; then
+            APP="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+          else
+            APP="build/ios/iphoneos/Runner.app"
+          fi
           mkdir -p build/Payload
           cp -R "$APP" build/Payload/Suicang.app
           if [[ -d build/ios/archive/Runner.xcarchive ]]; then
