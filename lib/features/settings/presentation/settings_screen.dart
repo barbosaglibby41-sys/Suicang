@@ -91,7 +91,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
-  void _showConnectionInfo() {
+  Future<void> _showConnectionInfo() async {
     final config = ref.read(providerConfigProvider);
     final baseUrl = TextEditingController(text: config.baseUrl);
     final model = TextEditingController(text: config.model);
@@ -99,7 +99,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     var enabled = config.enabled;
     var testing = false;
     String? testResult;
-    showModalBottomSheet<void>(
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -121,7 +121,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           Expanded(child: FilledButton(onPressed: () { ref.read(providerConfigProvider.notifier).setConnection(baseUrl: baseUrl.text.trim(), model: model.text.trim(), apiKey: apiKey.text, enabled: enabled); Navigator.pop(sheetContext); }, child: const Text('保存连接'))),
         ]),
       ]))),
-    ).whenComplete(() { baseUrl.dispose(); model.dispose(); apiKey.dispose(); });
+    );
+    baseUrl.dispose();
+    model.dispose();
+    apiKey.dispose();
   }
 }
 
@@ -285,13 +288,13 @@ class _WorldBookManager extends ConsumerWidget {
 
   static WorldBookEntryModel _copyEntry(WorldBookEntryModel entry, {List<String>? keys, String? content, bool? enabled, bool? constant, String? position}) => WorldBookEntryModel(id: entry.id, keys: keys ?? entry.keys, content: content ?? entry.content, enabled: enabled ?? entry.enabled, constant: constant ?? entry.constant, selective: entry.selective, position: position ?? entry.position, extensions: entry.extensions);
 
-  static void _editEntry(BuildContext context, WidgetRef ref, WorldBook book, WorldBookEntryModel entry) {
+  static Future<void> _editEntry(BuildContext context, WidgetRef ref, WorldBook book, WorldBookEntryModel entry) async {
     final keys = TextEditingController(text: entry.keys.join(', '));
     final content = TextEditingController(text: entry.content);
     var enabled = entry.enabled;
     var constant = entry.constant;
     var position = const {'before_char', 'after_char', 'before_example_messages', 'after_example_messages'}.contains(entry.position) ? entry.position : 'before_char';
-    showModalBottomSheet<void>(context: context, isScrollControlled: true, showDragHandle: true, builder: (sheetContext) => StatefulBuilder(builder: (context, setState) => SafeArea(child: Padding(padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.viewInsetsOf(context).bottom + 24), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+    await showModalBottomSheet<void>(context: context, isScrollControlled: true, showDragHandle: true, builder: (sheetContext) => StatefulBuilder(builder: (context, setState) => SafeArea(child: Padding(padding: EdgeInsets.fromLTRB(20, 8, 20, MediaQuery.viewInsetsOf(context).bottom + 24), child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Text('编辑世界书条目', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)), const SizedBox(height: 14),
       TextField(controller: keys, decoration: const InputDecoration(labelText: '关键词', hintText: '例如：城堡, 王国, 夜晚')), const SizedBox(height: 10),
       TextField(controller: content, minLines: 4, maxLines: 8, decoration: const InputDecoration(labelText: '注入内容')),
@@ -299,7 +302,9 @@ class _WorldBookManager extends ConsumerWidget {
       SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('常驻注入'), subtitle: const Text('不需要关键词命中', style: TextStyle(fontSize: 11)), value: constant, onChanged: (value) => setState(() => constant = value)),
       DropdownButtonFormField<String>(value: position, decoration: const InputDecoration(labelText: '注入位置'), items: const [DropdownMenuItem(value: 'before_char', child: Text('角色定义前')), DropdownMenuItem(value: 'after_char', child: Text('角色定义后')), DropdownMenuItem(value: 'before_example_messages', child: Text('示例消息前')), DropdownMenuItem(value: 'after_example_messages', child: Text('示例消息后'))], onChanged: (value) { if (value != null) setState(() => position = value); }), const SizedBox(height: 14),
       SizedBox(width: double.infinity, child: FilledButton(onPressed: () { final updated = _copyEntry(entry, keys: keys.text.split(',').map((item) => item.trim()).where((item) => item.isNotEmpty).toList(), content: content.text, enabled: enabled, constant: constant, position: position); ref.read(resourceLibraryProvider.notifier).updateWorldBookEntry(book, updated); Navigator.pop(sheetContext); }, child: const Text('保存条目')),
-    ])))).whenComplete(() { keys.dispose(); content.dispose(); });
+    ]))));
+    keys.dispose();
+    content.dispose();
   }
 }
 
