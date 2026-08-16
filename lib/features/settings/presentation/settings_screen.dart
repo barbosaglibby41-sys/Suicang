@@ -120,7 +120,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(width: 10),
           Expanded(child: FilledButton(onPressed: () { ref.read(providerConfigProvider.notifier).setConnection(baseUrl: baseUrl.text.trim(), model: model.text.trim(), apiKey: apiKey.text, enabled: enabled); Navigator.pop(sheetContext); }, child: const Text('保存连接'))),
         ]),
-      ]))));
+      ])))),
     );
     baseUrl.dispose();
     model.dispose();
