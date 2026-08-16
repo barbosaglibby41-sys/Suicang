@@ -37,24 +37,31 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build unsigned iOS archive
+      - name: Prepare Flutter iOS build settings
         shell: bash
         run: |
           set +e
-          flutter build ipa --release --no-codesign
-          status=$?
+          flutter build ios --release --no-codesign
           set -e
-          echo "Flutter exited with $status; locating complete app bundle"
-          APP=""
-          while IFS= read -r candidate; do
-            [[ -f "$candidate/Info.plist" ]] || continue
-            executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$candidate/Info.plist" 2>/dev/null || true)
-            [[ -n "$executable" && -f "$candidate/$executable" ]] || continue
-            APP="$candidate"
-            break
-          done < <(find build/ios -type d -name '*.app' -print)
-          test -n "$APP"
-          echo "Selected app bundle: $APP"
+          test -f ios/Flutter/Generated.xcconfig
+
+      - name: Create unsigned iOS archive with Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath build/ios/Suicang.xcarchive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+          APP="build/ios/Suicang.xcarchive/Products/Applications/Runner.app"
+          test -f "$APP/Info.plist"
+          executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
+          test -f "$APP/$executable"
           echo "APP_BUNDLE=$APP" >> "$GITHUB_ENV"
 
       - name: Package and validate unsigned IPA
@@ -68,8 +75,8 @@ jobs:
           test -f "$APP/$executable"
           mkdir -p build/Payload
           cp -R "$APP" build/Payload/Suicang.app
-          ARCHIVE=$(find build/ios -type d -name '*.xcarchive' -print -quit)
-          if [[ -n "$ARCHIVE" ]]; then
+          ARCHIVE="build/ios/Suicang.xcarchive"
+          if [[ -d "$ARCHIVE" ]]; then
             cp -R "$ARCHIVE" build/Suicang.xcarchive
           fi
 
