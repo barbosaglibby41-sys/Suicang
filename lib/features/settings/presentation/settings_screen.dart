@@ -239,7 +239,7 @@ class _PresetEditorState extends ConsumerState<_PresetEditor> {
     TextField(controller: systemPrompt, minLines: 5, maxLines: 12, decoration: const InputDecoration(labelText: 'System Prompt', alignLabelWithHint: true, hintText: '定义模型的整体行为、语气和输出规则')),
     const SizedBox(height: 16),
     SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_outlined), label: const Text('保存预设'))),
-  ]));
+  ])));
 }
 
 class _WorldBookCard extends StatelessWidget {
@@ -300,7 +300,7 @@ class _WorldBookManager extends ConsumerWidget {
       Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(current.name, style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w800)), const SizedBox(height: 4), Text('${current.entries.length} 个条目  ·  ${current.source}', style: const TextStyle(fontSize: 12, color: SuicangTheme.muted))])), IconButton(tooltip: '删除世界书', icon: const Icon(Icons.delete_outline), onPressed: () { ref.read(resourceLibraryProvider.notifier).removeWorldBook(current); Navigator.pop(context); })]),
       const SizedBox(height: 12),
       SizedBox(height: MediaQuery.sizeOf(context).height * .52, child: ReorderableListView.builder(itemCount: current.entries.length, onReorder: (oldIndex, newIndex) => ref.read(resourceLibraryProvider.notifier).reorderWorldBookEntry(current, oldIndex, newIndex), itemBuilder: (context, index) { final entry = current.entries[index]; return ListTile(key: ValueKey(entry.id), contentPadding: EdgeInsets.zero, leading: Icon(entry.enabled ? Icons.check_circle_outline : Icons.pause_circle_outline, color: entry.enabled ? Colors.green : SuicangTheme.muted), title: Text(entry.keys.isEmpty ? '无关键词条目' : entry.keys.join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)), subtitle: Text('${entry.position}${entry.constant ? '  ·  常驻' : ''}\n${entry.content}', maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)), trailing: Row(mainAxisSize: MainAxisSize.min, children: [Switch(value: entry.enabled, onChanged: (value) => ref.read(resourceLibraryProvider.notifier).updateWorldBookEntry(current, _copyEntry(entry, enabled: value))), IconButton(tooltip: '编辑条目', icon: const Icon(Icons.edit_outlined, size: 19), onPressed: () => _editEntry(context, ref, current, entry)), IconButton(tooltip: '删除条目', icon: const Icon(Icons.close, size: 18), onPressed: () => ref.read(resourceLibraryProvider.notifier).removeWorldBookEntry(current, entry))])); }))
-    ]));
+    ])));
   }
 
   static WorldBookEntryModel _copyEntry(WorldBookEntryModel entry, {List<String>? keys, String? content, bool? enabled, bool? constant, String? position}) => WorldBookEntryModel(id: entry.id, keys: keys ?? entry.keys, content: content ?? entry.content, enabled: enabled ?? entry.enabled, constant: constant ?? entry.constant, selective: entry.selective, position: position ?? entry.position, extensions: entry.extensions);
