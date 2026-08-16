@@ -37,19 +37,20 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build iOS app and retain unsigned output
+      - name: Build unsigned iOS archive
         shell: bash
         run: |
           set +e
-          flutter build ios --release --no-codesign
+          flutter build ipa --release --no-codesign
           status=$?
           set -e
-          echo "Flutter exited with $status; locating generated app bundle"
-          APP=$(find build -type d -name Runner.app -print -quit)
-          test -n "$APP"
+          echo "Flutter exited with $status; validating unsigned archive output"
+          APP="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
+          test -f "$APP/Info.plist"
+          test -f "$APP/Runner"
           echo "APP_BUNDLE=$APP" >> "$GITHUB_ENV"
 
-      - name: Package unsigned IPA container
+      - name: Package and validate unsigned IPA
         shell: bash
         run: |
           set -euo pipefail
@@ -57,15 +58,14 @@ jobs:
           APP="${APP_BUNDLE}"
           mkdir -p build/Payload
           cp -R "$APP" build/Payload/Suicang.app
-          ARCHIVE=$(find build -type d -name Runner.xcarchive -print -quit)
-          if [[ -n "$ARCHIVE" ]]; then
-            cp -R "$ARCHIVE" build/Suicang.xcarchive
-          fi
+          cp -R build/ios/archive/Runner.xcarchive build/Suicang.xcarchive
           ditto -c -k --sequesterRsrc --keepParent build/Payload "build/Suicang-${VERSION}-unsigned.ipa"
-          shasum -a 256 "build/Suicang-${VERSION}-unsigned.ipa" > "build/Suicang-${VERSION}-unsigned.ipa.sha256"
           unzip -t "build/Suicang-${VERSION}-unsigned.ipa"
+          unzip -p "build/Suicang-${VERSION}-unsigned.ipa" Payload/Suicang.app/Info.plist >/dev/null
+          unzip -p "build/Suicang-${VERSION}-unsigned.ipa" Payload/Suicang.app/Runner >/dev/null
+          shasum -a 256 "build/Suicang-${VERSION}-unsigned.ipa" > "build/Suicang-${VERSION}-unsigned.ipa.sha256"
 
-      - name: Upload unsigned archive and IPA
+      - name: Upload validated unsigned archive and IPA
         uses: actions/upload-artifact@v4
         with:
           name: Suicang-${{ inputs.version || '1.01' }}-unsigned-build
