@@ -37,18 +37,20 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build iOS archive with Flutter
-        run: flutter build ipa --release --no-codesign
+      - name: Build iOS app without signing
+        run: flutter build ios --release --no-codesign
 
       - name: Package unsigned IPA container
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ inputs.version || '1.01' }}"
-          ARCHIVE="build/ios/archive/Runner.xcarchive"
+          APP="build/ios/iphoneos/Runner.app"
           mkdir -p build/Payload
-          cp -R "$ARCHIVE/Products/Applications/Runner.app" build/Payload/Suicang.app
-          cp -R "$ARCHIVE" build/Suicang.xcarchive
+          cp -R "$APP" build/Payload/Suicang.app
+          if [[ -d build/ios/archive/Runner.xcarchive ]]; then
+            cp -R build/ios/archive/Runner.xcarchive build/Suicang.xcarchive
+          fi
           ditto -c -k --sequesterRsrc --keepParent build/Payload "build/Suicang-${VERSION}-unsigned.ipa"
           shasum -a 256 "build/Suicang-${VERSION}-unsigned.ipa" > "build/Suicang-${VERSION}-unsigned.ipa.sha256"
           unzip -t "build/Suicang-${VERSION}-unsigned.ipa"
@@ -58,10 +60,10 @@ jobs:
         with:
           name: Suicang-${{ inputs.version || '1.01' }}-unsigned-build
           path: |
-            build/Suicang.xcarchive
             build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa
             build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa.sha256
-          if-no-files-found: error
+            build/Suicang.xcarchive
+          if-no-files-found: warn
           retention-days: 14
 
       - name: Publish unsigned IPA to GitHub Release
