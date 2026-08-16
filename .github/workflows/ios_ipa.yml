@@ -44,23 +44,22 @@ jobs:
           flutter build ios --release --no-codesign
           status=$?
           set -e
-          echo "Flutter exited with $status; checking generated app bundle"
-          test -d build/ios/archive/Runner.xcarchive || test -d build/ios/iphoneos/Runner.app
+          echo "Flutter exited with $status; locating generated app bundle"
+          APP=$(find build -type d -name Runner.app -print -quit)
+          test -n "$APP"
+          echo "APP_BUNDLE=$APP" >> "$GITHUB_ENV"
 
       - name: Package unsigned IPA container
         shell: bash
         run: |
           set -euo pipefail
           VERSION="${{ inputs.version || '1.01' }}"
-          if [[ -d build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app ]]; then
-            APP="build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app"
-          else
-            APP="build/ios/iphoneos/Runner.app"
-          fi
+          APP="${APP_BUNDLE}"
           mkdir -p build/Payload
           cp -R "$APP" build/Payload/Suicang.app
-          if [[ -d build/ios/archive/Runner.xcarchive ]]; then
-            cp -R build/ios/archive/Runner.xcarchive build/Suicang.xcarchive
+          ARCHIVE=$(find build -type d -name Runner.xcarchive -print -quit)
+          if [[ -n "$ARCHIVE" ]]; then
+            cp -R "$ARCHIVE" build/Suicang.xcarchive
           fi
           ditto -c -k --sequesterRsrc --keepParent build/Payload "build/Suicang-${VERSION}-unsigned.ipa"
           shasum -a 256 "build/Suicang-${VERSION}-unsigned.ipa" > "build/Suicang-${VERSION}-unsigned.ipa.sha256"
