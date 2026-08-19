@@ -11,7 +11,7 @@ void main() {
     expect(find.text('继续对话'), findsOneWidget);
     expect(find.textContaining('想让谁走进你的故事'), findsOneWidget);
 
-    await tester.tap(find.text('对话'));
+    await tester.tap(find.bySemanticsLabel('对话'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Luna'), findsWidgets);
     expect(find.textContaining('写下你的回复'), findsOneWidget);
