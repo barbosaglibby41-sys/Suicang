@@ -6,7 +6,7 @@ on:
       version:
         description: Release version
         required: true
-        default: '1.01'
+        default: '0.1.4'
   push:
     tags:
       - 'v*'
@@ -68,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${{ inputs.version || '1.01' }}"
+          VERSION="${{ inputs.version || '0.1.4' }}"
           APP="${APP_BUNDLE}"
           test -f "$APP/Info.plist"
           executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
@@ -84,7 +84,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${{ inputs.version || '1.01' }}"
+          VERSION="${{ inputs.version || '0.1.4' }}"
           APP="${APP_BUNDLE}"
           executable=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Info.plist")
           mkdir -p build/Payload
@@ -98,10 +98,10 @@ jobs:
       - name: Upload validated unsigned archive and IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Suicang-${{ inputs.version || '1.01' }}-unsigned-build
+          name: Suicang-${{ inputs.version || '0.1.4' }}-unsigned-build
           path: |
-            build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa
-            build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa.sha256
+            build/Suicang-${{ inputs.version || '0.1.4' }}-unsigned.ipa
+            build/Suicang-${{ inputs.version || '0.1.4' }}-unsigned.ipa.sha256
             build/Suicang.xcarchive
           if-no-files-found: warn
           retention-days: 14
@@ -109,15 +109,15 @@ jobs:
       - name: Publish unsigned IPA to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version || '1.01' }}
-          name: Suicang v${{ inputs.version || '1.01' }}
+          tag_name: v${{ inputs.version || '0.1.4' }}
+          name: Suicang v${{ inputs.version || '0.1.4' }}
           body: |
-            Suicang v${{ inputs.version || '1.01' }} iOS build.
+            Suicang v${{ inputs.version || '0.1.4' }} iOS build.
 
             This is an unsigned IPA container. It is not directly runnable on iOS.
             Re-sign it with your Apple ID using SideStore, AltStore, Sideloadly, or Xcode.
           files: |
-            build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa
-            build/Suicang-${{ inputs.version || '1.01' }}-unsigned.ipa.sha256
+            build/Suicang-${{ inputs.version || '0.1.4' }}-unsigned.ipa
+            build/Suicang-${{ inputs.version || '0.1.4' }}-unsigned.ipa.sha256
           overwrite_files: true
           prerelease: true
