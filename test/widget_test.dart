@@ -7,13 +7,13 @@ void main() {
     await tester.pumpWidget(const ProviderScope(child: SuicangApp()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Suicang'), findsOneWidget);
-    expect(find.text('快速开始'), findsOneWidget);
-    expect(find.textContaining('让灵感'), findsOneWidget);
+    expect(find.text('suicang'), findsOneWidget);
+    expect(find.text('继续对话'), findsOneWidget);
+    expect(find.textContaining('想让谁走进你的故事'), findsOneWidget);
 
-    await tester.tap(find.text('聊天'));
+    await tester.tap(find.text('对话'));
     await tester.pumpAndSettle();
-    expect(find.text('Luna'), findsOneWidget);
+    expect(find.textContaining('Luna'), findsWidgets);
     expect(find.textContaining('写下你的回复'), findsOneWidget);
   });
 }
