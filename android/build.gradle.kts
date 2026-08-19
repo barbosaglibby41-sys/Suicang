@@ -19,19 +19,15 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// Some plugins still declare an older compileSdk. Apply the project-wide
-// API level after every subproject has evaluated its own build script.
-gradle.projectsEvaluated {
-    subprojects {
-        plugins.withId("com.android.application") {
-            extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
-                compileSdk = 36
-            }
+subprojects {
+    plugins.withId("com.android.application") {
+        extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
+            compileSdk = 36
         }
-        plugins.withId("com.android.library") {
-            extensions.configure<com.android.build.api.dsl.LibraryExtension> {
-                compileSdk = 36
-            }
+    }
+    plugins.withId("com.android.library") {
+        extensions.configure<com.android.build.api.dsl.LibraryExtension> {
+            compileSdk = 36
         }
     }
 }

@@ -54,7 +54,11 @@ jobs:
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --debug --android-skip-build-dependency-validation
+        run: |
+          # file_picker publishes an Android library compiled against API 34.
+          # Flutter's current lifecycle plugin requires API 36.
+          find "$PUB_CACHE/hosted" -path '*/file_picker-*/android/build.gradle' -exec sed -i -E 's/compileSdkVersion[[:space:]]+[0-9]+/compileSdkVersion 36/g; s/compileSdk[[:space:]]*=[[:space:]]*[0-9]+/compileSdk = 36/g' {} +
+          flutter build apk --debug --android-skip-build-dependency-validation
 
       - name: Name release APK
         if: startsWith(github.ref, 'refs/tags/')
